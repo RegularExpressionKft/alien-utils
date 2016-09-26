@@ -56,15 +56,13 @@ class AuthSuperagent
     @_loginOpts opts
     delete @[prop] for prop in [ 'authTokenGenerator', 'session' ]
 
+    # TODO: error / catch handling?
     @_pAuthTokenGenerator =
       @_login @params, @
       .then (session) =>
         @session = session
         delete @_pAuthTokenGenerator
         @authTokenGenerator = new @AuthTokenGenerator @session, @authOpts
-      .catch (error) =>
-        # TODO
-        console.log error
 
   authenticatedRequest: (method, token, args...) ->
     if !@request[method]?.apply?
