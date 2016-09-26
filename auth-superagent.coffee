@@ -37,12 +37,23 @@ class AuthSuperagent
   AuthTokenGenerator: AuthTokenGenerator
   RequestProxy: RequestProxy
 
-  constructor: (@_login, opts = {}) ->
-    _.defaults @, opts, header: 'X-Auth', request: request
+  constructor: (@_login, opts) ->
+    _.defaults @,
+      _.pick(opts, [ 'header', 'request' ]),
+      header: 'X-Auth', request: request
+
+    if opts?.login
+      @login opts
+    else
+      @_loginOpts opts
+
     return @
 
-  login: (opts = {}) ->
+  _loginOpts: (opts) ->
     _.extend @, _.pick opts, [ 'authOpts', 'params' ]
+
+  login: (opts) ->
+    @_loginOpts opts
     delete @[prop] for prop in [ 'authTokenGenerator', 'session' ]
 
     @_pAuthTokenGenerator =
