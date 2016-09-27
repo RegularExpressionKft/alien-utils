@@ -7,7 +7,7 @@ class AlienCommands
 
   constructor: (cmds, opts) ->
     _.extend @, opts
-    @cmds ?= {}
+    @cmds ?= Object.create null
     @extend cmds if cmds?
     return @
 
@@ -35,7 +35,7 @@ class AlienCommands
       cmd, this_object, args
 
   has: (cmd) -> @cmds[cmd]?
-  keys: -> _.keys @cmds
+  keys: -> _.keysIn(@cmds).filter (k) => @cmds[k]?
 
   apply: (cmd, this_object, args) ->
     if (f = @cmds[cmd])?
