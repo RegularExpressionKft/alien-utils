@@ -71,11 +71,22 @@ class AlienCommands
     cmds = @cmds
     base = Object.getPrototypeOf cmds
     for cmd in _.flatten arguments
-      if cmds.hasOwnProperty cmd and !base[cmd]?
+      if _.has(cmds, cmd) and !base?[cmd]?
         delete cmds[cmd]
       else
         cmds[cmd] = null
     @
+
+  set: (cmd, f) ->
+    if f?
+      @cmds[cmd] = f
+      @
+    else
+      @remove cmd
+
+  add: (cmd, f) ->
+    throw new Error "Duplicate #{@what}" if @has cmd
+    @set cmd, f
 
 class AlienCommander extends EventEmitter
 AlienCommander.Commands = AlienCommands
