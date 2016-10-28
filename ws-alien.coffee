@@ -1,3 +1,4 @@
+stream = require 'stream'
 uuid = require 'uuid'
 _ = require 'lodash'
 
@@ -13,11 +14,31 @@ class AlienWs extends AlienWsJson
       this_object._onWsaBadBinaryChannel error, args...
     what: 'binary channel id'
 
+  _wsaMakeBinaryChannelId: (channel_id) ->
+    unless channel_id instanceof Buffer
+      channel_id =
+        if _.isString(channel_id) and
+           (channel_id.length == 32 or channel_id.length == 36)
+          Buffer.from uuid.parse channel_id
+        else
+          Buffer.from channel_id
+    throw new Error 'Bad channel id' unless channel_id.length == 16
+    channel_id
+
   _wsaExtractIdFromBinary: (data) ->
     uuid.unparse data
 
   _wsaExtractDataFromBinary: (data) ->
     data.slice 16
+
+  _wsaMakeBinaryMessage: (channel_id, data, flags) ->
+    channel_id = @_wsaMakeBinaryChannelId channel_id
+
+    if data?
+      data = Buffer.from data unless data instanceof Buffer
+      Buffer.concat [ channel_id, data ]
+    else
+      channel_id
 
   _onWsaBadBinaryChannel: (error, msg, data, flags) ->
     if @ignoreBadBinaryChannel
@@ -26,9 +47,85 @@ class AlienWs extends AlienWsJson
       @_onWsjBadMessage error, msg, data, flags
 
   _onWsjBinaryMessage: (data, flags) ->
-    ch_id = @_wsaExtractIdFromBinary data
+    channel_id = @_wsaExtractIdFromBinary data
     msg = @_wsaExtractDataFromBinary data
-    @binaryChannels.call ch_id, @, msg, data, flags
+    @debug? "WsBinaryMessage #{channel_id} #{msg.length}"
+    @binaryChannels.call channel_id, @, msg, data, flags
+
+  sendOnBinaryChannel: (channel_id, data, flags, cb) ->
+    if !cb? and _.isFunction flags
+      cb = flags
+      flags = null
+    @sendBinary @_wsaMakeBinaryMessage(channel_id, data, flags), flags, cb
+
+  _wsaSetupStream: (destroyer, strm) ->
+    strm.wsaRunning = true
+
+    forward_error = (error) ->
+      if strm.wsaRunning and strm.listenerCount('error') > 0
+        strm.emit 'error', error
+      null
+
+    orig_destroy = strm.destroy
+    strm.destroy = =>
+      if strm.wsaRunning
+        strm.wsaRunning = false
+        @removeListener 'wsError', forward_error
+        destroyer 'destroy'
+      if orig_destroy?
+        orig_destroy.apply strm, arguments
+      else
+        strm
+
+    @on 'wsError', forward_error
+
+    strm
+
+  createReadStream: (channel_id, cleanup, stream_options) ->
+    channel_id = @_wsaMakeBinaryChannelId channel_id
+    channel_id_str = @_wsaExtractIdFromBinary channel_id
+
+    rstream = new stream.Readable _.defaults (read: ->), stream_options
+
+    destroyer = (cause) =>
+      @binaryChannels.remove channel_id_str
+      cleanup? @, channel_id_str, rstream, cause
+      null
+
+    @binaryChannels.add channel_id_str, (msg) ->
+      if msg?.length > 0
+        rstream.push msg if rstream.wsaRunning
+      else
+        rstream.push null if rstream.wsaRunning
+        destroyer 'eof'
+      null
+
+    @_wsaSetupStream destroyer, rstream
+
+  createWriteStream: (channel_id, cleanup, stream_options) ->
+    channel_id = @_wsaMakeBinaryChannelId channel_id
+    channel_id_str = @_wsaExtractIdFromBinary channel_id
+
+    wstream = new stream.Writable _.defaults
+        write: (data, encoding, cb) =>
+          if wstream.wsaRunning
+            if @open
+              @sendOnBinaryChannel channel_id, data, null, cb
+            else
+              error = new Error 'WebSocket not open'
+              if cb? then cb error else wstream.emit 'error', error
+          null
+      , stream_options
+    destroyer = (cause) =>
+      if @open
+        @sendOnBinaryChannel channel_id, null
+      else
+        wstream.emit 'error', new Error 'WebSocket not open'
+      cleanup? @, channel_id_str, wstream, cause
+      null
+    wstream.on 'finish', -> destroyer 'eof'
+
+    @_wsaSetupStream destroyer, wstream
 
   # JSON
 
@@ -46,6 +143,7 @@ class AlienWs extends AlienWsJson
       @_onWsjBadMessage error, msg, data, flags
 
   _onWsjJsonMessage: (msg, data, flags) ->
+    @debug? 'WsJsonMessage', msg
     if (_.isObject msg) && (_.isString msg.type)
       @messageTypes.call msg.type, @, msg, data, flags
     else

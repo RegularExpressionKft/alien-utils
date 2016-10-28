@@ -1,10 +1,16 @@
+_ = require 'lodash'
+
 AlienWsBase = require './ws-base'
 
 class AlienWsJson extends AlienWsBase
-  sendJSON: (obj) ->
+  sendJSON: (obj, flags, cb) ->
+    if !cb? and _.isFunction flags
+      cb = flags
+      flags = null
     try
-      @send JSON.stringify obj
+      @send JSON.stringify(obj), flags, cb
     catch error
+      cb? error
       @_syncError error, 'json-output'
 
   _onWsMessage: (data, flags) ->
@@ -14,7 +20,6 @@ class AlienWsJson extends AlienWsBase
         @_onWsjBinaryMessage data, flags
       else
         msg = JSON.parse data
-        @debug? 'WsJsonMessage', msg
         @_onWsjJsonMessage msg, data, flags
     catch error
       @_onWsjBadMessage error, msg, data, flags
