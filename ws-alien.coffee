@@ -88,7 +88,6 @@ class AlienWs extends AlienWsJson
     rstream = new stream.Readable _.defaults (read: ->), stream_options
 
     destroyer = (cause) =>
-      @binaryChannels.remove channel_id_str
       cleanup? @, channel_id_str, rstream, cause
       null
 
@@ -97,6 +96,7 @@ class AlienWs extends AlienWsJson
         rstream.push msg if rstream.wsaRunning
       else
         rstream.push null if rstream.wsaRunning
+        @binaryChannels.remove channel_id_str
         destroyer 'eof'
       null
 
