@@ -33,7 +33,7 @@ class AlienWsJson extends AlienWsBase
     type = if flags?.binary
         'binary'
       else
-        error.pkt = msg ? data
+        error.ws_pkt = msg ? data
         'json'
     @_asyncError error, "#{type}-input"
     null

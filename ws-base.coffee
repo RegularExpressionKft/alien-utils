@@ -64,8 +64,8 @@ class AlienWsBase extends AlienCommander
   fail: (error = 'Unknown error') ->
     @emit 'fail', error
     if @error?
-      if error.pkt?
-        @error error, error.pkt
+      if error.ws_pkt?
+        @error error, error.ws_pkt
       else
         @error error
     @_abort error if @ws?
@@ -112,10 +112,13 @@ class AlienWsBase extends AlienCommander
   _wsInstallHandlers: (ws) ->
     @_wsEventHandlers.keys().forEach (event) =>
       ws.on event, =>
-        if @ws == ws
-          @_wsEventHandlers.apply event, @, arguments
-        else
-          @debug? "stale WS event: #{event}"
+        try
+          if @ws == ws
+            @_wsEventHandlers.apply event, @, arguments
+          else
+            @debug? "stale WS event: #{event}"
+        catch error
+          @_onWsInternalError error, event, arguments
         null
     @
 
@@ -143,8 +146,13 @@ class AlienWsBase extends AlienCommander
     null
 
   # fail business end
-  _abort: (error = 'Unknown error') ->
-    @_wsClose error.code ? 1002, "#{error}"
+  _abort: (error) ->
+    msg = if error instanceof Error then error.ws_msg else error
+    @_wsClose error.ws_code ? 1002, msg ? 'Unknown error'
+
+  _onWsInternalError: (error, event, args) ->
+    error?.ws_pkt = args[0] if event is 'message'
+    @abort error
 
   # ==== Add / remove ws ====
 
