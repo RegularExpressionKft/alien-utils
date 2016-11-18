@@ -1,3 +1,4 @@
+Promise = require 'bluebird'
 pfs = require './promise-fs'
 
 fileUtils =
@@ -9,6 +10,10 @@ fileUtils =
     error? and (error instanceof Error) and (error.code == 'ENOENT')
   isEexist: (error) ->
     error? and (error instanceof Error) and (error.code == 'EEXIST')
+
+  promiseReadJson: (fn, options) ->
+    pfs.readFile fn, options
+       .then (data) -> JSON.parse data
 
   promiseWriteJson: (fn, json, options) ->
     try
