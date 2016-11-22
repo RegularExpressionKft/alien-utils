@@ -5,6 +5,7 @@ AlienUtils =
   Logger: require './logger'
   TaskRunner: require './task-runner'
   extend: require './extend'
+  'is-uuid': require './is-uuid'
 
   # Auth
   AuthTokenGenerator: require './auth-token-generator'
