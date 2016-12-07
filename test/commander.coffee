@@ -9,7 +9,6 @@ class TesterBase extends Commander
   cmd: (cmd, args...) -> @cmds.apply cmd, @, args
   inheritMethod: -> 'among'
   cmdMethod: -> 'key'
-  
 
 class TesterDerived extends TesterBase
   cmds: @::cmds.derive

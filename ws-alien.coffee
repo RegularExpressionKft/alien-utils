@@ -92,10 +92,10 @@ class AlienWs extends AlienWsJson
       null
 
     @binaryChannels.add channel_id_str, (msg) ->
-      if msg?.length > 0
-        rstream.push msg if rstream.wsaRunning
-      else
-        rstream.push null if rstream.wsaRunning
+      msg_ = if msg?.length > 0 then msg else null
+      rstream.push msg_ if rstream.wsaRunning
+
+      if msg_
         @binaryChannels.remove channel_id_str
         destroyer 'eof'
       null
