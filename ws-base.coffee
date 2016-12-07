@@ -24,11 +24,20 @@ class AlienWsBase extends AlienCommander
     @_addWebSocket ws if ws?
     return @
 
-  send: (data, options = {}) ->
-    if (error = @_checkSend data, options)?
+  send: (data, flags, cb) ->
+    if !cb? and _.isFunction flags
+      cb = flags
+      flags = null
+    if (error = @_checkSend data, flags)?
       @_syncError "send: #{error}", 'send'
     else
-      @_wsSend data, options
+      @_wsSend data, flags, cb
+
+  sendBinary: (data, flags, cb) ->
+    if !cb? and _.isFunction flags
+      cb = flags
+      flags = null
+    @send data, _.extend(binary: true, flags), cb
 
   _close: (code, data) ->
     if !@closing
@@ -55,8 +64,8 @@ class AlienWsBase extends AlienCommander
   fail: (error = 'Unknown error') ->
     @emit 'fail', error
     if @error?
-      if error.pkt?
-        @error error, error.pkt
+      if error.ws_pkt?
+        @error error, error.ws_pkt
       else
         @error error
     @_abort error if @ws?
@@ -76,12 +85,14 @@ class AlienWsBase extends AlienCommander
     if @ws.readyState == WebSocket.OPEN
       @wsPendingOps.read = true
       @open = true
+    @debug? 'AlienWs open'
     @emit 'wsOpen', arguments...
     null
 
   _onWsClosed: ->
     delete @wsPendingOps.close
     @open = false
+    @debug? 'AlienWs closed'
     @emit 'wsClosed', arguments...
     @emit 'closed' if @closing
     @_reset()
@@ -92,6 +103,7 @@ class AlienWsBase extends AlienCommander
     null
 
   _onWsError: (error) ->
+    @debug? 'AlienWs error', error
     @emit 'wsError', arguments...
     ops = _.keys @wsPendingOps
     @_asyncError error, if ops.length > 0 then ops.join() else 'no-op'
@@ -100,11 +112,13 @@ class AlienWsBase extends AlienCommander
   _wsInstallHandlers: (ws) ->
     @_wsEventHandlers.keys().forEach (event) =>
       ws.on event, =>
-        if @ws == ws
-          @debug? "WS event: #{event}"
-          @_wsEventHandlers.apply event, @, arguments
-        else
-          @debug? "stale WS event: #{event}"
+        try
+          if @ws == ws
+            @_wsEventHandlers.apply event, @, arguments
+          else
+            @debug? "stale WS event: #{event}"
+        catch error
+          @_onWsInternalError error, event, arguments
         null
     @
 
@@ -114,8 +128,8 @@ class AlienWsBase extends AlienCommander
     @emit 'wsClosing', arguments...
     null
 
-  _onWsSent: (data, options) ->
-    # @emit 'wsSent', data, options
+  _onWsSent: (data, flags) ->
+    # @emit 'wsSent', data, flags
     null
 
   # ==== Error handling ====
@@ -132,8 +146,13 @@ class AlienWsBase extends AlienCommander
     null
 
   # fail business end
-  _abort: (error = 'Unknown error') ->
-    @_wsClose error.code ? 1002, "#{error}"
+  _abort: (error) ->
+    msg = if error instanceof Error then error.ws_msg else error
+    @_wsClose error.ws_code ? 1002, msg ? 'Unknown error'
+
+  _onWsInternalError: (error, event, args) ->
+    error?.ws_pkt = args[0] if event is 'message'
+    @abort error
 
   # ==== Add / remove ws ====
 
@@ -171,7 +190,7 @@ class AlienWsBase extends AlienCommander
   _checkClose: ->
     @_checkWs()
 
-  _checkSend: (data, options) ->
+  _checkSend: (data, flags) ->
     @_checkWs() ? @checkWsClosing()
 
   # ==== Low level api
@@ -190,12 +209,16 @@ class AlienWsBase extends AlienCommander
       delete @wsPendingOps.close
     @
 
-  _wsSend: (data, options) ->
-    @ws.send data, options, (error) =>
+  _wsSend: (data, flags, cb) ->
+    if !cb? and _.isFunction flags
+      cb = flags
+      flags = null
+    @ws.send data, flags, (error) =>
+      cb? arguments...
       if error?
         @_onWsError error, 'send'
       else
-        @_onWsSent data, options
+        @_onWsSent data, flags
       null
     @
 

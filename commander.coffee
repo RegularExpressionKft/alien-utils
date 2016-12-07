@@ -7,7 +7,7 @@ class AlienCommands
 
   constructor: (cmds, opts) ->
     _.extend @, opts
-    @cmds ?= {}
+    @cmds ?= Object.create null
     @extend cmds if cmds?
     return @
 
@@ -35,7 +35,7 @@ class AlienCommands
       cmd, this_object, args
 
   has: (cmd) -> @cmds[cmd]?
-  keys: -> _.keys @cmds
+  keys: -> _.keysIn(@cmds).filter (k) => @cmds[k]?
 
   apply: (cmd, this_object, args) ->
     if (f = @cmds[cmd])?
@@ -71,11 +71,22 @@ class AlienCommands
     cmds = @cmds
     base = Object.getPrototypeOf cmds
     for cmd in _.flatten arguments
-      if cmds.hasOwnProperty cmd and !base[cmd]?
+      if _.has(cmds, cmd) and !base?[cmd]?
         delete cmds[cmd]
       else
         cmds[cmd] = null
     @
+
+  set: (cmd, f) ->
+    if f?
+      @cmds[cmd] = f
+      @
+    else
+      @remove cmd
+
+  add: (cmd, f) ->
+    throw new Error "Duplicate #{@what}" if @has cmd
+    @set cmd, f
 
 class AlienCommander extends EventEmitter
 AlienCommander.Commands = AlienCommands
