@@ -23,5 +23,6 @@ AlienUtils =
   StreamProxy: require './stream-proxy'
   fileUtils: require './file-utils'
   pfs: require './promise-fs'
+  promiseStdout: require './promise-stdout'
 
 module.exports = AlienUtils
