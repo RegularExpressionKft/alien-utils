@@ -42,6 +42,6 @@ fileUtils =
       else
         Promise.resolve()
 
-    iter()
+    next()
 
 module.exports = fileUtils
