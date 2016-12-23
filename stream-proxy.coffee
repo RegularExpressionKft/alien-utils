@@ -73,9 +73,10 @@ class StreamProxyReader extends stream.Readable
               push = @push buffer[@position]
               @position++
           else
+            size ?= @defaultChunkSize
             while push and @position < buffer.length
               to_read = buffer.length - @position
-              to_read = size if (size ? @defaultChunkSize) < to_read
+              to_read = size if size < to_read
               push = @push buffer.slice @position, @position + to_read
               @position += to_read
           @_inPush = false
