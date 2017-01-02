@@ -30,7 +30,7 @@ fileUtils =
 
     i = 0
     next = ->
-      if i < paths.length
+      if i < paths?.length
         if (path = paths[i++])?
           pfs.stat path
              .then (stats) ->
