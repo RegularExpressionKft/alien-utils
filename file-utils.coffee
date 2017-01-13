@@ -25,6 +25,38 @@ fileUtils =
     catch error
       Promise.reject error
 
+  promiseReadBuffer: (fn, pos, len) ->
+    buffer = Buffer.alloc len
+    fd = null
+
+    pfs.open fn, 'r'
+       .then (_fd) ->
+         fd = _fd
+         pfs.read fd, buffer, 0, len, pos
+       .finally ->
+         pfs.close fd
+            .catch (error) -> logger.warn error
+         null
+       .then (bytes_read) ->
+         if bytes_read is len
+           buffer
+         else
+           buffer.slice 0, bytes_read
+
+  promiseWriteBuffer: (fn, buffer, pos = 0, flags = 'r+', mode) ->
+    fd = null
+
+    pfs.open fn, flags, mode
+       .then (_fd) ->
+         fd = _fd
+         pfs.write fd, buffer, 0, buffer.length, pos
+       .catch (error) ->
+         pfs.close fd
+            .then -> Promise.reject error
+       .then (bytes_written) ->
+         pfs.close fd
+            .return bytes_written
+
   chainStat: (paths, processor) ->
     processor ?= (path, stats) -> path
 
