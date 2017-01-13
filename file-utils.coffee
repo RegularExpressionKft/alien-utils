@@ -1,5 +1,6 @@
 Promise = require 'bluebird'
 pfs = require './promise-fs'
+pu = require './promise'
 
 isEnoent = (error) ->
   error? and (error instanceof Error) and (error.code == 'ENOENT')
@@ -59,21 +60,9 @@ fileUtils =
 
   chainStat: (paths, processor) ->
     processor ?= (path, stats) -> path
-
-    i = 0
-    next = ->
-      if i < paths?.length
-        if (path = paths[i++])?
-          pfs.stat path
-             .then (stats) ->
-               Promise.resolve processor path, stats
-                      .then (result) -> result ? next()
-             .catch isEnoent, next
-        else
-          next()
-      else
-        Promise.resolve()
-
-    next()
+    pu.promiseFirst paths, (path, idx) ->
+      pfs.stat path
+         .then (stats) -> processor path, stats, idx
+         .catchReturn isEnoent, null
 
 module.exports = fileUtils

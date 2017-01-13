@@ -6,6 +6,7 @@ AlienUtils =
   TaskRunner: require './task-runner'
   extend: require './extend'
   'is-uuid': require './is-uuid'
+  promise: require './promise'
 
   # Auth
   AuthTokenGenerator: require './auth-token-generator'
