@@ -34,10 +34,9 @@ fileUtils =
        .then (_fd) ->
          fd = _fd
          pfs.read fd, buffer, 0, len, pos
-       .finally ->
+       .catch (error) ->
          pfs.close fd
-            .catch (error) -> logger.warn error
-         null
+            .then -> Promise.reject error
        .then (bytes_read) ->
          if bytes_read is len
            buffer
