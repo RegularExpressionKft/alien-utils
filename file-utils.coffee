@@ -64,4 +64,9 @@ fileUtils =
          .then (stats) -> processor path, stats, idx
          .catchReturn isEnoent, null
 
+  promiseCheckExists: (fn) ->
+    pfs.stat fn
+       .return true
+       .catchReturn isEnoent, false
+
 module.exports = fileUtils
