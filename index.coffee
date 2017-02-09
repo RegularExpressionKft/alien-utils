@@ -20,10 +20,11 @@ AlienUtils =
   WsClient: require './ws-client'
 
   # Files / streams
-  FileCahce: require './file-cache'
+  FileCache: require './file-cache'
   StreamProxy: require './stream-proxy'
   fileUtils: require './file-utils'
   pfs: require './promise-fs'
   promiseStdout: require './promise-stdout'
+  promiseExec: require './promise-exec'
 
 module.exports = AlienUtils
