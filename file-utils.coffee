@@ -38,10 +38,12 @@ fileUtils =
          pfs.close fd
             .then -> Promise.reject error
        .then (bytes_read) ->
-         if bytes_read is len
-           buffer
-         else
-           buffer.slice 0, bytes_read
+         pfs.close fd
+            .then ->
+              if bytes_read is len
+                buffer
+              else
+                buffer.slice 0, bytes_read
 
   promiseWriteBuffer: (fn, buffer, pos = 0, flags = 'r+', mode) ->
     fd = null
