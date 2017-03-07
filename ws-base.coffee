@@ -152,7 +152,7 @@ class AlienWsBase extends AlienCommander
 
   _onWsInternalError: (error, event, args) ->
     error?.ws_pkt = args[0] if event is 'message'
-    @abort error
+    @_abort error
 
   # ==== Add / remove ws ====
 
