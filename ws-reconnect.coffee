@@ -40,7 +40,7 @@ alienReconnectWs = (alien_ws, connect_url, connect_protocols) ->
         0
 
     _wsrcCheckConnect: (url, protocols) ->
-      if url?
+      if url? or @url?
         null
       else
         'connect: no url'
