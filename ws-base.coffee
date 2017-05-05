@@ -1,5 +1,4 @@
 _ = require 'lodash'
-WebSocket = require 'ws'
 
 AlienCommander = require './commander'
 
@@ -7,6 +6,12 @@ AlienCommander = require './commander'
 #      for high level events (open, close, fail, etc..)
 # TODO Safer, simpler cleanup for tests
 class AlienWsBase extends AlienCommander
+  _READY_STATE:
+    CONNECTING: 0
+    OPEN: 1
+    CLOSING: 2
+    CLOSED: 3
+
   # ==== Public API ====
 
   @fromAlienServer: (master, ws, params, next) ->
@@ -82,7 +87,7 @@ class AlienWsBase extends AlienCommander
       what: 'event'
 
   _onWsOpen: ->
-    if @ws.readyState == WebSocket.OPEN
+    if @ws.readyState == @_READY_STATE.OPEN
       @wsPendingOps.read = true
       @open = true
     @debug? 'AlienWs open'
@@ -148,7 +153,8 @@ class AlienWsBase extends AlienCommander
   # fail business end
   _abort: (error) ->
     msg = if error instanceof Error then error.ws_msg else error
-    @_wsClose error.ws_code ? 1002, msg ? 'Unknown error'
+    code = error.ws_code ? if @ws?.browser then 4000 else 1002
+    @_wsClose code, msg ? 'Unknown error'
 
   _onWsInternalError: (error, event, args) ->
     error?.ws_pkt = args[0] if event is 'message'
@@ -166,11 +172,36 @@ class AlienWsBase extends AlienCommander
   _reset: (state) ->
     _.extend @, @_resetDefaults, state
 
+  _wrapBrowserWs: (ws) ->
+    _.defaults ws,
+      browser: true
+      on: (event, cb) ->
+        switch event
+          when 'message'
+            # TODO binary, masked
+            @addEventListener event, (e) ->
+              cb.call @, e.data, {}
+          when 'close'
+            @addEventListener event, (e) ->
+              cb.call @, e.code, e.reason
+          # TODO when 'error' ???
+          else
+            @addEventListener arguments...
+      once: (event, cb) ->
+        self = @
+        listener = ->
+          self.removeEventListener event, listener
+          cb.apply @, arguments
+        @on arguments...
+
   _addWebSocket: (ws, reset) ->
     @_retireWebSocket @ws if @ws?
     @_reset reset
+
+    ws = @_wrapBrowserWs ws if WebSocket? and ws instanceof WebSocket
+
     @_wsInstallHandlers @ws = ws
-    @_onWsOpen() if @ws.readyState == WebSocket.OPEN
+    @_onWsOpen() if @ws.readyState == @_READY_STATE.OPEN
     @
 
   _retireWebSocket: (ws) ->
@@ -204,7 +235,7 @@ class AlienWsBase extends AlienCommander
     fired = false
     @ws.once 'close', -> fired = true
     @ws.close arguments...
-    if @ws.readyState == WebSocket.CLOSED
+    if @ws.readyState == @_READY_STATE.CLOSED
       @_onWsClosed() unless fired
       delete @wsPendingOps.close
     @
