@@ -48,6 +48,7 @@ class AlienWsBase extends AlienCommander
     if !@closing
       @emit 'closing', code, data
       @closing = true
+      @open = false
     @_wsClose code, data
 
   close: (code, data) ->
