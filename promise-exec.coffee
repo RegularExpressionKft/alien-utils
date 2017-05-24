@@ -5,6 +5,8 @@ promise_exec = (cmdline, options) ->
   new Promise (resolve, reject) ->
     child_process.exec cmdline, options, (error, stdout, stderr) ->
       if error?
+        error.stdout = stdout if stdout?
+        error.stderr = stderr if stderr?
         reject error
       else
         resolve
