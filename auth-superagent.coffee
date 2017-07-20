@@ -1,7 +1,6 @@
-Promise = require 'bluebird'
-_ = require 'lodash'
-methods = require 'methods'
 request = require 'superagent'
+methods = require 'methods'
+_ = require 'lodash'
 
 AuthTokenGenerator = require 'alien-utils/auth-token-generator'
 
