@@ -1,3 +1,4 @@
+Promise = require 'bluebird'
 crypto = require 'crypto'
 base64url = require 'base64url'
 

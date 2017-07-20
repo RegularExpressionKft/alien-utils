@@ -1,7 +1,6 @@
-Promise = require 'bluebird'
-_ = require 'lodash'
-methods = require 'methods'
 request = require 'superagent'
+methods = require 'methods'
+_ = require 'lodash'
 
 AuthTokenGenerator = require 'alien-utils/auth-token-generator'
 
@@ -72,16 +71,23 @@ class AuthSuperagent
         throw new Error "Bad request method '#{method}'"
     @request[method](args...).set @header, token
 
+  promiseAuthToken: ->
+    if @authTokenGenerator?
+      @authTokenGenerator.promiseAuthToken()
+    else if @_pAuthTokenGenerator?
+      @_pAuthTokenGenerator.then (tg) -> tg.promiseAuthToken()
+    else
+      @login().then (tg) -> tg.promiseAuthToken()
+
+  authError: ->
+    @authTokenGenerator = null
+    @
+
 methods.forEach (m) ->
   p = "promise#{m.charAt(0).toUpperCase() + m.substr 1}"
   AuthSuperagent::[p] = (args...) ->
-    p_token = if @authTokenGenerator?
-        @authTokenGenerator.promiseAuthToken()
-      else if @_pAuthTokenGenerator?
-        @_pAuthTokenGenerator.then (tg) => tg.promiseAuthToken()
-      else
-        @login().then (tg) => tg.promiseAuthToken()
-    p_token.then (token) =>
+    @promiseAuthToken()
+    .then (token) =>
       request: @authenticatedRequest m, token, args...
   AuthSuperagent::[m] = ->
     new @RequestProxy @[p] arguments...

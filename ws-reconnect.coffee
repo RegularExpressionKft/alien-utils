@@ -1,3 +1,4 @@
+Promise = require 'bluebird'
 WebSocket = require 'ws'
 _ = require 'lodash'
 
@@ -48,18 +49,28 @@ alienReconnectWs = (alien_ws, connect_url, connect_protocols) ->
     _wsrcConnect: (url_, protocols_) ->
       @url = url_ if url_?
       @protocols = protocols_ if protocols_?
-      if (url = if _.isFunction @url then @url() else @url)?
-        protocols = if _.isFunction @protocols
+      if (p_url = if _.isFunction @url then @url() else @url)?
+        p_protocols = if _.isFunction @protocols
             @protocols()
           else
             @protocols
-        try
-          ws = new WebSocket url, protocols
-          @_addWebSocket ws, _wsrcConnecting: true
-          @emit 'wsrcConnecting'
-        catch error
-          @_asyncError error, 'connect'
-          @_wsrcReconnect() if @reconnect
+        @_wsrcConnectGuard = guard =
+          Promise.join p_url, p_protocols, (url, protocols) =>
+            if @_wsrcConnectGuard == guard
+              if url?
+                ws = new WebSocket url, protocols
+                @_addWebSocket ws, _wsrcConnecting: true
+                @emit 'wsrcConnecting', url, protocols
+                ws
+              else
+                @_wsrcNoUrl()
+                null
+            else
+              null
+          .catch (error) =>
+            @_asyncError error, 'connect'
+            @_wsrcReconnect() if @reconnect
+            null
       else
         @_wsrcNoUrl()
       @

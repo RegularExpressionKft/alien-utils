@@ -14,7 +14,7 @@ class AlienWsBase extends AlienCommander
 
   # ==== Public API ====
 
-  @fromAlienServer: (master, ws, params, next) ->
+  @fromAlienServer: (master, ws, params) ->
     req = ws.upgradeReq
     req.alienLogger.decorate(
       new @ null,
@@ -159,6 +159,7 @@ class AlienWsBase extends AlienCommander
 
   _onWsInternalError: (error, event, args) ->
     error?.ws_pkt = args[0] if event is 'message'
+    @error? 'ws internal error', error
     @_abort error
 
   # ==== Add / remove ws ====
