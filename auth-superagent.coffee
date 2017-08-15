@@ -41,12 +41,21 @@ class AuthSuperagent
       _.pick(opts, [ 'header', 'request' ]),
       header: 'X-Auth', request: request
 
-    if opts?.login
+    if opts?.session?
+      @setSession opts.session
+    else if opts?.login
       @login opts
     else
       @_loginOpts opts
 
     return @
+
+  setSession: (session) =>
+    # TODO assert proper session
+    @session = session
+    @_pAuthTokenGenerator = null
+    @authTokenGenerator = new @AuthTokenGenerator @session, @authOpts
+    @
 
   _loginOpts: (opts) ->
     _.extend @, _.pick opts, [ 'authOpts', 'params' ]
@@ -56,12 +65,7 @@ class AuthSuperagent
     delete @[prop] for prop in [ 'authTokenGenerator', 'session' ]
 
     # TODO: error / catch handling?
-    @_pAuthTokenGenerator =
-      @_login @params, @
-      .then (session) =>
-        @session = session
-        delete @_pAuthTokenGenerator
-        @authTokenGenerator = new @AuthTokenGenerator @session, @authOpts
+    @_pAuthTokenGenerator = @_login(@params, @).then @setSession
 
   authenticatedRequest: (method, token, args...) ->
     if !@request[method]?.apply?

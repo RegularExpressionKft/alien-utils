@@ -4,7 +4,6 @@ AlienUtils =
   EventTester: require './event-tester'
   Logger: require './logger'
   TaskRunner: require './task-runner'
-  extend: require './extend'
   'is-uuid': require './is-uuid'
   promise: require './promise'
 

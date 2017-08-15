@@ -8,11 +8,12 @@ _ = require 'lodash'
 
 StreamProxy = require './stream-proxy'
 TaskRunner = require './task-runner'
-extend = require './extend'
 pfs = require './promise-fs'
 file_utils = require './file-utils'
 
 underscore = "_"[0]
+
+class CacheMissError extends Error then constructor: -> super
 
 # TODO Get rid of callbacks, use promises everywhere
 class FileCache extends EventEmitter
@@ -30,7 +31,7 @@ class FileCache extends EventEmitter
     @options.tmpDirectory ?= "#{@options.directory}/__tmp__"
     @options.tmpDirMode ?= @options.dirMode
 
-    @MissError = extend.error 'CacheMissError'
+    @MissError = CacheMissError
     @_loading = {}
     @_queued = []
 
