@@ -22,6 +22,7 @@ class AlienWsBase extends AlienCommander
         master: master
         app: master.app
         id: req.alienUuid
+        req: req
     )._addWebSocket ws
 
   constructor: (ws, reset) ->
@@ -91,7 +92,7 @@ class AlienWsBase extends AlienCommander
     if @ws.readyState == @_READY_STATE.OPEN
       @wsPendingOps.read = true
       @open = true
-    @debug? 'AlienWs open'
+    @debug? 'AlienWs open', @id
     @emit 'wsOpen', arguments...
     null
 
