@@ -16,7 +16,7 @@ class AlienWsBase extends AlienCommander
 
   @fromAlienServer: (master, ws, params) ->
     req = ws.upgradeReq
-    req.alienLogger.decorate(
+    self = req.alienLogger.decorate(
       new @ null,
         params: params
         master: master
@@ -24,6 +24,8 @@ class AlienWsBase extends AlienCommander
         id: req.alienUuid
         req: req
     )._addWebSocket ws
+    req.emit 'alien-upgrade', self
+    self
 
   constructor: (ws, reset) ->
     @_reset reset
