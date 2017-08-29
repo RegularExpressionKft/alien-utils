@@ -4,10 +4,13 @@ AlienUtils =
   EventTester: require './event-tester'
   Logger: require './logger'
   TaskRunner: require './task-runner'
-  'is-uuid': require './is-uuid'
+  isUuid: require './is-uuid'
+  once: require './once'
+  plugin: require './plugin-utils'
   promise: require './promise'
 
   # Auth
+  AuthSuperagent: require './auth-superagent'
   AuthTokenGenerator: require './auth-token-generator'
   authUtils: require './auth-utils'
 
