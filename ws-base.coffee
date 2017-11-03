@@ -74,9 +74,9 @@ class AlienWsBase extends AlienCommander
     @emit 'fail', error
     if @error?
       if error.ws_pkt?
-        @error error, error.ws_pkt
+        @error "ws error #{error}", error.ws_pkt
       else
-        @error error
+        @error "ws error #{error}", error
     @_abort error if @ws?
     @
 
