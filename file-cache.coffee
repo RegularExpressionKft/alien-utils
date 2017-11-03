@@ -309,6 +309,10 @@ class FileCache extends EventEmitter
       job.writerFinished = true
       job.writerFailed = true
       @_onJobMaybeFinished job
+    else if job.loaderFailed
+      @debug? 'Writer done, loader failed, not moving', @_logJob job
+      job.writerFinished = true
+      @_onJobMaybeFinished job
     else
       @debug? 'Writer done, moving', @_logJob job
       pfs.rename job.tmpFn, fn = @_tagToFn job.tag, 'data'
