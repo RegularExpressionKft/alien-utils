@@ -98,6 +98,14 @@ alienReconnectWs = (alien_ws, connect_url, connect_protocols) ->
           null
       @
 
+    _wsrcKill: ->
+      @reconnect = false
+      if @_wsrcConnecting
+        @_wsrcConnecting = false
+        @_wsrcResetTimer()
+        @emit 'closed'
+      null
+
     _onWsrcTimer: ->
       @_wsrcTimer = null
       if @reconnect and !@ws?
@@ -114,28 +122,17 @@ alienReconnectWs = (alien_ws, connect_url, connect_protocols) ->
       @emit 'wsrcReconnect'
       null
 
-    _checkConnecting: ->
-      if @_wsrcConnecting
-        'websocket is not connected yet'
-      else
-        null
-
-  _checkSend = alien_ws._checkSend
-  alien_ws._checkSend = ->
-    @_checkConnecting() ? _checkSend.apply @, arguments
-
   terminate = alien_ws.terminate
   alien_ws.terminate = ->
-    @reconnect = false
-    if @ws?
-      terminate.apply @, arguments...
-    else
-      @_wsrcResetTimer()
-      @emit 'closed'
+    @_wsrcKill()
+    terminate.apply @, arguments
 
-  alien_ws.on 'closing', ->
-            @reconnect = false
-          .on 'wsOpen', ->
+  close = alien_ws.close
+  alien_ws.close = ->
+    @_wsrcKill()
+    close.apply @, arguments
+
+  alien_ws.on 'wsOpen', ->
             @_wsrcConnecting = false
             @_wsrcResetTimer()
             if @_wsrcWasConnected

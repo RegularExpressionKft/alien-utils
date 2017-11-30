@@ -99,7 +99,7 @@ class AlienWsBase extends AlienCommander
     delete @wsPendingOps.close
     @debug? 'AlienWs closed'
     @emit 'wsClosed', arguments...
-    @emit 'closed' if 'closing' is @_setStatus 'closed'
+    @emit 'closed' unless 'closed' is @_setStatus 'closed'
     @_reset()
     null
 
@@ -168,11 +168,10 @@ class AlienWsBase extends AlienCommander
   _resetDefaults:
     wsPendingOps: {}
     terminating: false
-    closing: false # ?
-    open: false
+    status: 'init'
     ws: null
 
-  _statuses: [ 'init', 'open', 'closing', 'closed' ]
+  _statuses: [ 'init', 'connecting', 'open', 'closing', 'closed' ]
 
   _setStatus: (status = 'invalid') ->
     unless status in @_statuses
@@ -186,6 +185,8 @@ class AlienWsBase extends AlienCommander
 
   _reset: (state) ->
     _.extend @, @_resetDefaults, state
+    @_setStatus @status
+    @
 
   _wrapBrowserWs: (ws) ->
     _.defaults ws,
@@ -216,7 +217,16 @@ class AlienWsBase extends AlienCommander
     ws = @_wrapBrowserWs ws if WebSocket? and ws instanceof WebSocket
 
     @_wsInstallHandlers @ws = ws
-    @_onWsOpen() if @ws.readyState == @_READY_STATE.OPEN
+    switch @ws.readyState
+      when @_READY_STATE.CONNECTING
+        @_setStatus 'connecting'
+      when @_READY_STATE.OPEN
+        @_onWsOpen()
+      when @_READY_STATE.CLOSING
+        @_setStatus 'closing'
+      when @_READY_STATE.CLOSED
+        @_setStatus 'closed'
+
     @
 
   _retireWebSocket: (ws) ->
