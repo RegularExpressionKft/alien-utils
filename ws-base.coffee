@@ -48,11 +48,12 @@ class AlienWsBase extends AlienCommander
     @send data, _.extend(binary: true, flags), cb
 
   _close: (code, data) ->
-    if !@closing
-      @emit 'closing', code, data
-      @closing = true
-      @open = false
-    @_wsClose code, data
+    if @ws?
+      if !@closing
+        @emit 'closing', code, data
+        @_setStatus 'closing'
+      @_wsClose code, data
+    @
 
   close: (code, data) ->
     if (error = @_checkClose code, data)?
@@ -63,11 +64,7 @@ class AlienWsBase extends AlienCommander
   # Gets rid of @ for good no matter what, no checks, no exceptions
   # No guarantees on calling hooks or anything else
   terminate: (code, data) ->
-    @terminating = true
-    if (error = @_checkClose code, data)?
-      @_wsClose code, data if @ws?
-    else
-      @_close code, data
+    @_close code, data
     @
 
   fail: (error = 'Unknown error') ->
@@ -93,17 +90,16 @@ class AlienWsBase extends AlienCommander
   _onWsOpen: ->
     if @ws.readyState == @_READY_STATE.OPEN
       @wsPendingOps.read = true
-      @open = true
+      @emit 'open' unless 'open' is @_setStatus 'open'
     @debug? 'AlienWs open', @id
     @emit 'wsOpen', arguments...
     null
 
   _onWsClosed: ->
     delete @wsPendingOps.close
-    @open = false
     @debug? 'AlienWs closed'
     @emit 'wsClosed', arguments...
-    @emit 'closed' if @closing
+    @emit 'closed' if 'closing' is @_setStatus 'closed'
     @_reset()
     null
 
@@ -156,9 +152,11 @@ class AlienWsBase extends AlienCommander
 
   # fail business end
   _abort: (error) ->
-    msg = if error instanceof Error then error.ws_msg else error
-    code = error.ws_code ? if @ws?.browser then 4000 else 1002
-    @_wsClose code, msg ? 'Unknown error'
+    if @ws?
+      msg = if error instanceof Error then error.ws_msg else error
+      code = error.ws_code ? if @ws.browser then 4000 else 1002
+      @_close code, msg ? 'Unknown error'
+    null
 
   _onWsInternalError: (error, event, args) ->
     error?.ws_pkt = args[0] if event is 'message'
@@ -169,10 +167,22 @@ class AlienWsBase extends AlienCommander
 
   _resetDefaults:
     wsPendingOps: {}
-    wsClosing: false
+    terminating: false
     closing: false # ?
     open: false
     ws: null
+
+  _statuses: [ 'init', 'open', 'closing', 'closed' ]
+
+  _setStatus: (status = 'invalid') ->
+    unless status in @_statuses
+      @_syncError "Trying to set invalid status: #{status}", 'setStatus'
+
+    was = @status ? 'init'
+    for st in @_statuses
+      @[st] = st is status
+    @status = status
+    was
 
   _reset: (state) ->
     _.extend @, @_resetDefaults, state
@@ -210,7 +220,10 @@ class AlienWsBase extends AlienCommander
     @
 
   _retireWebSocket: (ws) ->
-    ws.close()
+    try
+      ws.close()
+    catch error
+      # nop
     @
 
   # ==== High level api helpers, plugins, patch points ====
@@ -219,22 +232,21 @@ class AlienWsBase extends AlienCommander
   _checkWs: ->
     if @ws? then null else 'no websocket'
 
-  checkWsClosing: ->
-    if @wsClosing then 'websocket is closed' else null
+  checkWsOpen: ->
+    if @open then null else "websocket is #{@status ? 'init'}"
 
   # _checkClose: (code, data) ->
   _checkClose: ->
     @_checkWs()
 
   _checkSend: (data, flags) ->
-    @_checkWs() ? @checkWsClosing()
+    @_checkWs() ? @checkWsOpen()
 
   # ==== Low level api
 
   _wsClose: ->
     @_onWsClosing arguments...
     @wsPendingOps.close = true
-    @wsClosing = true
 
     # Sometimes there is no close event.
     fired = false
