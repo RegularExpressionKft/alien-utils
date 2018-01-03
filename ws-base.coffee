@@ -262,7 +262,8 @@ class AlienWsBase extends AlienCommander
     fired = false
     @ws.once 'close', -> fired = true
     @ws.close arguments...
-    if @ws.readyState == @_READY_STATE.CLOSED
+    # @ws.close may emit closed event clearing @ws
+    if @ws?.readyState == @_READY_STATE.CLOSED
       @_onWsClosed() unless fired
       delete @wsPendingOps.close
     @
