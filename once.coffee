@@ -7,7 +7,7 @@ remove = (emitter, handlers) ->
 
 install = (emitter, handlers) ->
   emitter.on event, handler for event, handler of handlers
-  -> remove emitter, handlers
+  _.once -> remove emitter, handlers
 
 promise = (emitter, handlers_cb, cb) ->
   kill = null
