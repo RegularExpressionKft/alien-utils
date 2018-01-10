@@ -136,6 +136,20 @@ describe 'Once upon a time', ->
         check_absent 'alma'
         check_absent 'barac'
 
+    it 'callback reject', ->
+      handlers_ = -> handlers
+      once.promise emitter, handlers_, ->
+        new Promise (resolve, reject) ->
+          check_installed 'alma'
+          check_installed 'barac'
+          reject new Error 'Alma'
+      .then ->
+        assert false, 'should reject'
+      .catch (error) ->
+        assert /Alma/.test(error), 'rejected'
+        check_absent 'alma'
+        check_absent 'barac'
+
   describe 'promiseSimple', ->
     setup = (marker, cb) ->
       handlers_ = _.extend {}, handlers,

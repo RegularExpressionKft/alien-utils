@@ -9,9 +9,35 @@ install = (emitter, handlers) ->
   emitter.on event, handler for event, handler of handlers
   -> remove emitter, handlers
 
+promise = (emitter, handlers_cb, cb) ->
+  kill = null
+
+  p_cb_resolve = p_cb_reject = null
+  p_cb = new Promise (resolve, reject) ->
+    p_cb_resolve = resolve
+    p_cb_reject = reject
+    null
+
+  p_once = new Promise (resolve, reject) ->
+    kill = if _.isFunction handlers_cb
+        install emitter, handlers_cb resolve, reject
+      else
+        install emitter, handlers_cb
+
+    p =
+      if _.isFunction cb
+        Promise.method(cb) resolve, reject, kill
+      else
+        Promise.resolve cb
+    p.then p_cb_resolve, p_cb_reject
+
+  Promise.join p_cb, p_once, (a, b) -> b
+         .finally -> kill?()
+
 module.exports =
   remove: remove
   install: install
+  promise: promise
 
   any: (emitter, handlers) ->
     handlers_ = _.mapValues handlers, (handler, event) ->
@@ -28,20 +54,10 @@ module.exports =
       -> remove emitter, handlers_ if handler.apply @, arguments
     install emitter, handlers_
 
-  promise: (emitter, handlers_cb, cb) ->
-    kill = null
-    new Promise (resolve, reject) ->
-      kill = if _.isFunction handlers_cb
-          install emitter, handlers_cb resolve, reject
-        else
-          install emitter, handlers_cb
-      cb? resolve, reject, kill
-    .finally -> kill?()
 
   promiseSimple: (emitter, handlers, cb) ->
-    kill = null
-    new Promise (resolve, reject) ->
-      kill = install emitter, _.mapValues handlers, (handler, event) ->
+    mapper = (resolve, reject) ->
+      _.mapValues handlers, (handler, event) ->
         if handler is 'resolve'
           resolve
         else if handler is 'reject'
@@ -55,8 +71,7 @@ module.exports =
               reject error
         else
           -> resolve handler
-      cb? resolve, reject, kill
-    .finally -> kill?()
+    promise emitter, mapper, cb
 
   finally: (emitter, handlers, cb) ->
     kill = install emitter, handlers
