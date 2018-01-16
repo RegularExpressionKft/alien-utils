@@ -358,7 +358,15 @@ class FileCache extends EventEmitter
       @_rejectMiss()
 
   _onJobFinished: (job) ->
-    job.state = 'finished'
+    job.finished = true
+    if job.loaderFailed
+      job.state = 'failed'
+      job.failed = true
+      @emit 'failed', job
+    else
+      # writer may have failed, but was loaded ok
+      job.state = 'finished'
+      @emit 'loaded', job
     delete @_loading[job.tag]
     @debug? 'Job done', @_logJob job
 
@@ -369,26 +377,19 @@ class FileCache extends EventEmitter
                 @error? 'onJobFinished:', errors
                 null
               .then =>
-                if job.loaderFailed or job.writerFailed
-                  @emit 'failed', job
-                  @emit 'finished', job
-                  @_runQueue()
-                  false
-                else
-                  @_runQueue()
+                unless job.writerFailed
                   @_addToCache job
                   .catch (error) =>
                     @error? 'addToCache', error
                     null
-                  .then =>
-                    @emit 'loaded', job
-                    @emit 'finished', job
-                    true
+              .finally =>
+                @emit 'finished', job
+                @_runQueue()
 
   _onJobMaybeFinished: (job) ->
     if job.loaderFailed or
        (job.loaderFinished and job.writerFinished)
-      @_onJobFinished job
+      @_onJobFinished job unless job.finished
     null
 
   _loadJob: (job) ->
