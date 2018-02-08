@@ -54,6 +54,13 @@ class AlienLogger
       (@formatMessage options) +
       (@formatMeta options)
 
+    filter_opts:
+      max_meta_size: 500000
+      regexps: []
+      asterisk: '*****'
+      circular: '@@@@@'
+      max_depth: null
+
     formatTimestamp: (options) ->
       if _.isFunction options.timestamp
         options.timestamp() + ' '
@@ -76,9 +83,41 @@ class AlienLogger
 
     formatMessage: (options) -> options.message ? ''
 
+    pwdfilter: (arg, util_depth) ->
+      processed = []
+      _opts = @filter_opts
+      dedupe = (x, depth) ->
+        if (_opts.max_depth? && (depth >= _opts.max_depth)) || (x in processed)
+          _opts.circular
+        else
+          processed.push x
+          null
+      _pwdfilter = (x, depth) ->
+        depth++
+        if _.isFunction x
+          x
+        if _.isArray x
+          dedupe(x, depth) ?
+            _.map x, (s) -> _pwdfilter s, depth
+        else if _.isObject x
+          dedupe(x,depth) ?
+            _.mapValues x, (v, k) ->
+              if _opts.regexps.some((r) -> r.test k)
+                _opts.asterisk
+              else
+                _pwdfilter v, depth
+        else
+          x
+
+      ret = util.inspect arg, util_depth
+      if (ret.length < _opts.max_meta_size)  && (_opts.regexps?.length  > 0) &&
+          _opts.regexps.some( (w) -> w.test ret)
+         ret = util.inspect _pwdfilter(arg, 0), util_depth
+      ret
+
     formatMeta: (options) ->
-      (if options.meta && Object.keys(options.meta).length > 0
-        "\n" + util.inspect(options.meta, depth: null)
+      (if _.isObject(options.meta) && (_.keys options.meta).length >0
+        "\n" + @pwdfilter options.meta, depth: null
       else
         '').replace /\n(?=.)/g, "\n\t"
 
@@ -91,6 +130,8 @@ class AlienLogger
     config = mode: config if _.isString config
     config ?= {}
     master_id ?= config.masterId ? '------'
+
+    _.extend @formatters.filter_opts, config.filter_opts
 
     if !@logger?
       transports = []
