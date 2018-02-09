@@ -55,7 +55,8 @@ class AlienLogger
       (@formatMeta options)
 
     filter_opts:
-      max_meta_size: 500000
+      max_meta_size: 100000
+      max_meta_msg: "\n... object is too big to show ...\n"
       regexps: []
       asterisk: '*****'
       circular: '@@@@@'
@@ -83,7 +84,7 @@ class AlienLogger
 
     formatMessage: (options) -> options.message ? ''
 
-    pwdfilter: (arg, util_depth) ->
+    pwdfilter: (arg) ->
       processed = []
       _opts = @filter_opts
       dedupe = (x, depth) ->
@@ -108,16 +109,22 @@ class AlienLogger
                 _pwdfilter v, depth
         else
           x
+      _pwdfilter arg, 0
 
-      ret = util.inspect arg, util_depth
-      if (ret.length < _opts.max_meta_size)  && (_opts.regexps?.length  > 0) &&
-          _opts.regexps.some( (w) -> w.test ret)
-         ret = util.inspect _pwdfilter(arg, 0), util_depth
-      ret
+    _formatMeta: (meta, util_depth) ->
+      str_obj = util.inspect meta, util_depth
+      if str_obj.length > @filter_opts.max_meta_size
+        str_obj = str_obj.substr(1,@filter_opts.max_meta_size) +
+              @filter_opts.max_meta_msg
+      else if !_.isEmpty(@filter_opts.regexps) && \
+                           @filter_opts.regexps.some( (w) -> w.test str_obj)
+        str_obj = util.inspect @pwdfilter(meta), util_depth
+      str_obj
+
 
     formatMeta: (options) ->
-      (if _.isObject(options.meta) && (_.keys options.meta).length >0
-        "\n" + @pwdfilter options.meta, depth: null
+      (if _.isObject(options.meta) && !_.isEmpty options.meta
+        "\n" + @_formatMeta options.meta, depth: null
       else
         '').replace /\n(?=.)/g, "\n\t"
 
