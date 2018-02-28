@@ -57,9 +57,10 @@ class AlienLogger
     filter_opts:
       max_meta_size: 100000
       max_meta_msg: "\n... object is too big to show ...\n"
-      regexps: []
+      regexps: [ /p(ass)?w(or)?d/ ]
       asterisk: '*****'
       circular: '@@@@@'
+      atmaxdepth: '... output maxdepth is reached ...'
       max_depth: null
 
     formatTimestamp: (options) ->
@@ -88,7 +89,9 @@ class AlienLogger
       processed = []
       _opts = @filter_opts
       dedupe = (x, depth) ->
-        if (_opts.max_depth? && (depth >= _opts.max_depth)) || (x in processed)
+        if _opts.max_depth? && (depth >= _opts.max_depth)
+          _opts.atmaxdepth
+        else if x in processed
           _opts.circular
         else
           processed.push x
@@ -101,7 +104,7 @@ class AlienLogger
           dedupe(x, depth) ?
             _.map x, (s) -> _pwdfilter s, depth
         else if _.isObject x
-          dedupe(x,depth) ?
+          dedupe(x, depth) ?
             _.mapValues x, (v, k) ->
               if _opts.regexps.some((r) -> r.test k)
                 _opts.asterisk
@@ -114,7 +117,7 @@ class AlienLogger
     _formatMeta: (meta, util_depth) ->
       str_obj = util.inspect meta, util_depth
       if str_obj.length > @filter_opts.max_meta_size
-        str_obj = str_obj.substr(1,@filter_opts.max_meta_size) +
+        str_obj = str_obj.substr(@filter_opts.max_meta_size) +
               @filter_opts.max_meta_msg
       else if !_.isEmpty(@filter_opts.regexps) && \
                            @filter_opts.regexps.some( (w) -> w.test str_obj)
