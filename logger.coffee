@@ -119,7 +119,7 @@ class AlienLogger
       if str_obj.length > @filter_opts.max_meta_size
         str_obj = str_obj.substr(@filter_opts.max_meta_size) +
               @filter_opts.max_meta_msg
-      else if !_.isEmpty(@filter_opts.regexps) && \
+      else if !_.isEmpty(@filter_opts.regexps) && 
                            @filter_opts.regexps.some( (w) -> w.test str_obj)
         str_obj = util.inspect @pwdfilter(meta), util_depth
       str_obj
