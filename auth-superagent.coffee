@@ -27,6 +27,7 @@ class RequestProxy
   send: -> @queue 'send', arguments
   end: -> @queue 'end', arguments
   on: -> @queue 'on', arguments
+  timeout: -> @queue 'timeout', arguments
 
   then: -> @promise.then arguments...
   catch: -> @promise.catch arguments...
