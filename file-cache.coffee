@@ -252,6 +252,7 @@ class FileCache extends EventEmitter
     if error?
       @error? 'Loader failed',
         error: error
+        errorStr: "#{error}"
         job: @_logJob job
       job.loaderState = 'error'
       job.loaderFailed = true
@@ -262,13 +263,21 @@ class FileCache extends EventEmitter
     job.loaderFinished = true
     @_onJobMaybeFinished job
 
-  _addLoaderStream: (job, stream) ->
-    @debug? 'Started loader', @_logJob job
-    job.loaderState = 'running'
-    job._loaderStream = stream
-    stream.on 'error', (error) => @_onLoaderFinished job, error
-          .on 'end', => @_onLoaderFinished job
-          .pipe job._proxy
+  _addLoaderStream: (job, stream_or_buffer) ->
+    if stream_or_buffer instanceof Buffer
+      buffer = stream_or_buffer
+      @debug? 'Loader returned buffer', @_logJob job
+      job.loaderState = 'running'
+      job._proxy.end buffer
+      @_onLoaderFinished job
+    else
+      stream = stream_or_buffer
+      @debug? 'Started loader', @_logJob job
+      job.loaderState = 'running'
+      job._loaderStream = stream
+      stream.on 'error', (error) => @_onLoaderFinished job, error
+            .on 'end', => @_onLoaderFinished job
+            .pipe job._proxy
     @
 
   _setupLoader: (job) ->
