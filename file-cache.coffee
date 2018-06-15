@@ -256,11 +256,14 @@ class FileCache extends EventEmitter
         job: @_logJob job
       job.loaderState = 'error'
       job.loaderFailed = true
+
+      job._proxy.end() unless job._proxy.finished
     else
       @debug? 'Loader done', @_logJob job
       job.loaderState = 'done'
       job.size = job._proxy.length
     job.loaderFinished = true
+
     @_onJobMaybeFinished job
 
   _addLoaderStream: (job, stream_or_buffer) ->
