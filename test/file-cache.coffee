@@ -39,7 +39,7 @@ check_promise = (cache, entry, state) ->
       served = entry.served = true
       Promise.resolve entry.source
 
-  cache.promise entry.cmd.id, entry.cmd
+  cache.promiseStream entry.cmd.id, entry.cmd
        .then (result) ->
          assert _.isObject(result), 'result is object'
          assert (result.stream instanceof stream.Readable), 'result.stream'
@@ -157,7 +157,7 @@ describe 'FileCache', ->
 
   it 'loaded luck', ->
     entry = entries.luck
-    cache.promise entry.cmd.id, entry.cmd
+    cache.promiseStream entry.cmd.id, entry.cmd
          .then (result) ->
            assert _.isObject(result), 'result is object'
            assert !result.job?, 'no job, no problem'
