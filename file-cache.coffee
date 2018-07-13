@@ -13,6 +13,42 @@ file_utils = require './file-utils'
 
 underscore = "_"[0]
 
+streamToBuffer = (stream) ->
+  new Promise (resolve, reject) ->
+    datas = []
+    done = false
+
+    reject 'no stream' unless stream?
+    reject 'stream not readable' unless stream.readable
+
+    cleanup = ->
+      stream.removeListener 'data', onData
+      stream.removeListener 'end', onEnd
+      stream.removeListener 'error', onError
+      stream.removeListener 'close', onClose
+
+    onData = (data) ->
+      datas.push data
+
+    onEnd = ->
+      return if done
+
+      done = true
+      cleanup()
+      resolve Buffer.concat datas
+
+    onError = (args...) ->
+      done = true
+      cleanup()
+      reject args...
+
+    onClose = onEnd
+
+    stream.on 'data', onData
+    stream.on 'end', onEnd
+    stream.on 'error', onError
+    stream.on 'close', onClose
+
 class CacheMissError extends Error then constructor: -> super
 
 # TODO Get rid of callbacks, use promises everywhere
@@ -473,5 +509,12 @@ class FileCache extends EventEmitter
       @_promiseLoaded args...
     .catch @isMiss, (error) =>
       @_promiseMissing args...
+
+  promiseBuffer: (args...) ->
+    @promiseStream(args...).then (result) =>
+      if result.stream?
+        streamToBuffer result.stream
+      else
+        Promise.reject 'promiseBuffer - No stream is result.'
 
 module.exports = FileCache
