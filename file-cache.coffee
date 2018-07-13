@@ -10,44 +10,24 @@ StreamProxy = require './stream-proxy'
 TaskRunner = require './task-runner'
 pfs = require './promise-fs'
 file_utils = require './file-utils'
+once = require './once'
 
 underscore = "_"[0]
 
 streamToBuffer = (stream) ->
-  new Promise (resolve, reject) ->
-    datas = []
-    done = false
+  datas = []
 
-    reject 'no stream' unless stream?
-    reject 'stream not readable' unless stream.readable
+  Promise.reject 'no stream' unless stream?
+  Promise.reject 'stream not readable' unless stream.readable
 
-    cleanup = ->
-      stream.removeListener 'data', onData
-      stream.removeListener 'end', onEnd
-      stream.removeListener 'error', onError
-      stream.removeListener 'close', onClose
-
-    onData = (data) ->
-      datas.push data
-
-    onEnd = ->
-      return if done
-
-      done = true
-      cleanup()
-      resolve Buffer.concat datas
-
-    onError = (args...) ->
-      done = true
-      cleanup()
-      reject args...
-
-    onClose = onEnd
-
-    stream.on 'data', onData
-    stream.on 'end', onEnd
-    stream.on 'error', onError
-    stream.on 'close', onClose
+  onEnd = -> Buffer.concat datas
+  once.promiseSimple stream,
+    end: onEnd
+    close: onEnd
+    error: 'reject'
+    data: (data) ->
+            datas.push data
+            null
 
 class CacheMissError extends Error then constructor: -> super
 
