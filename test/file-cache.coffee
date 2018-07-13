@@ -9,6 +9,7 @@ FileCache = require '../file-cache'
 pfs = require '../promise-fs'
 
 cache_dir = "#{process.cwd()}/__test-cache__"
+cacheType = 'data'
 
 rm_cache = (done) ->
   child_process.exec "rm -rf '#{cache_dir}'",
@@ -26,7 +27,7 @@ check_promise = (cache, entry, state) ->
   # debug_events entry.source, "#{entry.cmd.id}.source"
   cache._promiseLoaderStream = (job) ->
     assert _.isObject(job), 'job is object'
-    assert.strictEqual job.cmd, entry.cmd, 'job.cmd'
+    assert.deepEqual _.omit(job.cmd, 'type'), entry.cmd, 'job.cmd'
     if entry.job?
       assert.strictEqual job, entry.job, 'job equal'
     else
@@ -39,7 +40,7 @@ check_promise = (cache, entry, state) ->
       served = entry.served = true
       Promise.resolve entry.source
 
-  cache.promise entry.cmd.id, entry.cmd
+  cache.promiseStream entry.cmd.id, entry.cmd
        .then (result) ->
          assert _.isObject(result), 'result is object'
          assert (result.stream instanceof stream.Readable), 'result.stream'
@@ -99,10 +100,10 @@ make_entries = (ids...) ->
   for id in ids
     entries[id] =
       cmd: id: id
-      fn: "#{cache_dir}/#{id}.data"
+      fn: "#{cache_dir}/#{id}.#{cacheType}"
   entries
 
-describe 'FileCache', ->
+describe 'FileCache.Stream', ->
   cache = null
   entries = make_entries 'luck', 'kitten'
 
@@ -114,6 +115,7 @@ describe 'FileCache', ->
       name: 'test'
       maxLoading: 1
       maxFiles: 1
+      type: cacheType
     # cache.debug = console.log
     cache.error = console.log
 
@@ -157,7 +159,7 @@ describe 'FileCache', ->
 
   it 'loaded luck', ->
     entry = entries.luck
-    cache.promise entry.cmd.id, entry.cmd
+    cache.promiseStream entry.cmd.id, entry.cmd
          .then (result) ->
            assert _.isObject(result), 'result is object'
            assert !result.job?, 'no job, no problem'
