@@ -23,6 +23,7 @@ class FileCache extends EventEmitter
     maxBytes: 104857600 # 100MB
     # directory: "#{process.cwd()}/__cache__"
     digest: 'sha256'
+    type: 'data'
 
   constructor: (options) ->
     @options = _.defaults options, @defaults, file_utils.defaults
@@ -48,8 +49,14 @@ class FileCache extends EventEmitter
       stream: job._proxy.createReader()
       job: job
 
+  _returnPromiseJobResult: (job) ->
+    job.promise ?= new Promise (resolve, reject) ->
+      job.resolve = resolve
+      job.reject = reject
+
   _logJob: (job) ->
-    _.omitBy job, (v, k) -> k[0] == underscore
+    _.omitBy job, (v, k) ->
+      k[0] == underscore || k in [ 'promise', 'resolve', 'reject' ]
 
   _tagToFn: (tag, ext) ->
     @options.directory + '/' + tag + if ext? then ".#{ext}" else ''
@@ -69,7 +76,7 @@ class FileCache extends EventEmitter
   # ==== CLEAN
 
   _loadCache: ->
-    @_scanning ?= pfs.glob "#{@options.directory}/*.data"
+    @_scanning ?= pfs.glob "#{@options.directory}/*.#{@options.type}"
                      .then (files) =>
                        @_loadCachedFiles files
                      .catch (error) =>
@@ -77,12 +84,13 @@ class FileCache extends EventEmitter
                        null
 
   _loadCachedFile: (fn) ->
-    if (match = fn.match /([^/]+)\.data$/)?
+    if (match = fn.match new RegExp "([^/]+)\\.#{@options.type}$")?
       result = tag: match[1]
       pfs.stat fn
-         .then (stat) ->
+         .then (stat) =>
            result.size = stat.size
-           fn = fn.replace /\.data$/, '.lru'
+           re = new RegExp "\.#{@options.type}$"
+           fn = fn.replace re, '.lru'
            pfs.stat fn
          .then (stat) ->
            result.lru = stat.mtime
@@ -114,7 +122,7 @@ class FileCache extends EventEmitter
 
   _removeOneFromCache: (tag) ->
     base = @_tagToFn tag
-    pfs.unlink "#{base}.data"
+    pfs.unlink "#{base}.#{@options.type}"
        .catch (error) ->
          @error? 'unlink data', error unless file_utils.isEnoent error
          null
@@ -326,7 +334,7 @@ class FileCache extends EventEmitter
       @_onJobMaybeFinished job
     else
       @debug? 'Writer done, moving', @_logJob job
-      pfs.rename job.tmpFn, fn = @_tagToFn job.tag, 'data'
+      pfs.rename job.tmpFn, fn = @_tagToFn job.tag, @options.type
          .then =>
            job.fn = fn
            @debug? 'Rename finished, writer success', @_logJob job
@@ -368,6 +376,12 @@ class FileCache extends EventEmitter
     else
       @_rejectMiss()
 
+  _promiseLoadingBuffer: (tag) ->
+    if (loading = @_loading[tag])?
+      @_returnPromiseJobResult loading
+    else
+      @_rejectMiss()
+
   _onJobFinished: (job) ->
     job.finished = true
     if job.loaderFailed
@@ -395,6 +409,12 @@ class FileCache extends EventEmitter
                     null
               .finally =>
                 @emit 'finished', job
+                if job.promise
+                  @debug? 'finally', failed: job.failed, promise: !!job.promise
+                  if job.failed
+                    job.reject()
+                  else
+                    job.resolve @_promiseLoadedBuffer job.tag
                 @_runQueue()
 
   _onJobMaybeFinished: (job) ->
@@ -416,20 +436,37 @@ class FileCache extends EventEmitter
     @_loadJob job
     @_returnJob job
 
+  _promiseLoadingBufferJob: (job) ->
+    @_loadJob job
+    @_returnPromiseJobResult job
+
   # ==== QUEUE
   # Queue jobs if too many loaders are running
 
-  _promiseQueued: (tag) ->
+  _promiseQueued: (tag, opts = {}) ->
     if (queued = @_queued.find (job) -> job.tag == tag)?
       @_returnJob queued
     else
       @_rejectMiss()
 
-  _promiseQueuedJob: (job) ->
+  _promiseQueuedBuffer: (tag, opts = {}) ->
+    if (queued = @_queued.find (job) -> job.tag == tag)?
+      @_returnPromiseJobResult queued
+    else
+      @_rejectMiss()
+
+  __promiseQueuedJob: (job) ->
     job.state = 'queued'
     @_queued.push job
     @emit 'queued', job
+
+  _promiseQueuedJob: (job) ->
+    @__promiseQueuedJob job
     @_returnJob job
+
+  _promiseQueuedBufferJob: (job) ->
+    @__promiseQueuedJob job
+    @_returnPromiseJobResult job
 
   _runQueue: ->
     if @_queued.length > 0 and _.size(@_loading) < @options.maxLoading
@@ -440,30 +477,46 @@ class FileCache extends EventEmitter
   # Result cached in a file
 
   _promiseLoaded: (tag) ->
-    pfs.createReadStream fn = @_tagToFn tag, 'data'
+    pfs.createReadStream fn = @_tagToFn tag, @options.type
        .then (stream) =>
          @_updateLru tag
          stream: stream
          fn: fn
        .catch file_utils.isEnoent, @_rejectMiss
 
+  _promiseLoadedBuffer: (tag) ->
+    pfs.readFile fn = @_tagToFn tag, @options.type
+       .then (buffer) =>
+         @_updateLru tag
+         buffer
+       .catch file_utils.isEnoent, @_rejectMiss
+
   # ==== MISS > ADD
   # Result not cached > load | queue
 
-  _promiseMissing: (tag, cmd) ->
-    job =
-      tag: tag
-      cmd: cmd
-      now: new Date
-      _proxy: new StreamProxy
+  __composeJob: (tag, cmd) ->
+    tag: tag
+    cmd: cmd
+    now: new Date
+    _proxy: new StreamProxy
+
+  _promiseMissing: (args...) ->
+    job = @__composeJob args...
     if _.size(@_loading) < @options.maxLoading
       @_promiseLoadingJob job
     else
       @_promiseQueuedJob job
 
+  _promiseMissingBuffer: (args...) ->
+    job = @__composeJob args...
+    if _.size(@_loading) < @options.maxLoading
+      @_promiseLoadingBufferJob job
+    else
+      @_promiseQueuedBufferJob job
+
   # ==== GET
 
-  promise: (args...) ->
+  promiseStream: (args...) =>
     @_promiseLoading args...
     .catch @isMiss, (error) =>
       @_promiseQueued args...
@@ -471,5 +524,14 @@ class FileCache extends EventEmitter
       @_promiseLoaded args...
     .catch @isMiss, (error) =>
       @_promiseMissing args...
+
+  promiseBuffer: (args...) =>
+    @_promiseLoadingBuffer args...
+    .catch @isMiss, (error) =>
+      @_promiseQueuedBuffer args...
+    .catch @isMiss, (error) =>
+      @_promiseLoadedBuffer args...
+    .catch @isMiss, (error) =>
+      @_promiseMissingBuffer args...
 
 module.exports = FileCache
