@@ -490,11 +490,22 @@ class FileCache extends EventEmitter
     .catch @isMiss, (error) =>
       @_promiseMissing args...
 
+  _promiseStreamToBuffer: (result) =>
+    if result.stream?
+      streamToBuffer result.stream
+    else
+      Promise.reject 'promiseBuffer - No stream in result.'
+
   promiseBuffer: (args...) ->
-    @promiseStream(args...).then (result) =>
-      if result.stream?
-        streamToBuffer result.stream
-      else
-        Promise.reject 'promiseBuffer - No stream is result.'
+    @promiseStream(args...).then @_promiseStreamToBuffer
+
+  promiseMaybeBuffer: (args...) ->
+    @_promiseLoaded(args...).then @_promiseStreamToBuffer
+    .catch @isMiss, (error) =>
+      @promiseStream args...
+      .catch (error) =>
+        @warn? 'promiseMaybeBuffer', error
+        null
+      null
 
 module.exports = FileCache
