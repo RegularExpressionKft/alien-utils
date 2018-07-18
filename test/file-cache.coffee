@@ -179,3 +179,31 @@ describe 'FileCache', ->
                     .then -> Promise.reject 'kitten should be gone'
                     .catch (error) ->
                       assert (error.code == 'ENOENT'), 'is no longer'
+
+  describe 'promiseMaybe', ->
+    _stream = null
+    _loader = null
+
+    before ->
+      _stream = new stream.Readable read: -> null
+      loader = cache._promiseLoaderStream
+      cache._promiseLoaderStream = -> Promise.resolve _stream
+
+    after ->
+      cache._promiseLoaderStream = _loader
+
+    it 'not yet loaded', ->
+      entry = entries.kitten
+      cache.promiseMaybeBuffer entry.cmd.id, entry.cmd
+           .then (buffer) ->
+             assert !buffer, 'nothing returned'
+
+    it 'already loaded', ->
+      entry = entries.kitten
+      _stream.push null
+
+      # TODO: delay for fs op
+      Promise.delay(50).then ->
+        cache.promiseMaybeBuffer entry.cmd.id, entry.cmd
+             .then (buffer) ->
+               assert buffer instanceof Buffer, 'content returned'

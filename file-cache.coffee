@@ -10,8 +10,24 @@ StreamProxy = require './stream-proxy'
 TaskRunner = require './task-runner'
 pfs = require './promise-fs'
 file_utils = require './file-utils'
+once = require './once'
 
 underscore = "_"[0]
+
+streamToBuffer = (stream) ->
+  datas = []
+
+  Promise.reject 'no stream' unless stream?
+  Promise.reject 'stream not readable' unless stream.readable
+
+  onEnd = -> Buffer.concat datas
+  once.promiseSimple stream,
+    end: onEnd
+    close: onEnd
+    error: 'reject'
+    data: (data) ->
+            datas.push data
+            null
 
 class CacheMissError extends Error then constructor: -> super
 
@@ -473,5 +489,23 @@ class FileCache extends EventEmitter
       @_promiseLoaded args...
     .catch @isMiss, (error) =>
       @_promiseMissing args...
+
+  _promiseStreamToBuffer: (result) =>
+    if result.stream?
+      streamToBuffer result.stream
+    else
+      Promise.reject 'promiseBuffer - No stream in result.'
+
+  promiseBuffer: (args...) ->
+    @promiseStream(args...).then @_promiseStreamToBuffer
+
+  promiseMaybeBuffer: (args...) ->
+    @_promiseLoaded(args...).then @_promiseStreamToBuffer
+    .catch @isMiss, (error) =>
+      @promiseStream args...
+      .catch (error) =>
+        @warn? 'promiseMaybeBuffer', error
+        null
+      null
 
 module.exports = FileCache
