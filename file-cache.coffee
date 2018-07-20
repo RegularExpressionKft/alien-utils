@@ -97,7 +97,7 @@ class FileCache extends EventEmitter
     if (match = fn.match new RegExp "([^/]+)\\.#{@options.type}$")?
       result = tag: match[1]
       pfs.stat fn
-         .then (stat) ->
+         .then (stat) =>
            result.size = stat.size
            re = new RegExp "\.#{@options.type}$"
            fn = fn.replace re, '.lru'
