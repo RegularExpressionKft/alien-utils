@@ -158,7 +158,7 @@ class AlienLogger
           formatter: AlienLogger.boundFormatter
           json: false
 
-      @logger = new winston.Logger
+      @logger = winston.createLogger
         transports: transports
 
       if config?.level?
