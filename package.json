@@ -28,7 +28,7 @@
     "superagent": "^3.8.3",
     "uuid": "^3.3.2",
     "winston": "^3.0.0",
-    "ws": "^5.0.0"
+    "ws": "^4.0.0"
   },
   "devDependencies": {
     "mocha": "^5.2.0"
