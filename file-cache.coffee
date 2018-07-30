@@ -43,8 +43,9 @@ class FileCache extends EventEmitter
 
   constructor: (options) ->
     @options = _.defaults options, @defaults, file_utils.defaults
-    @options.directory ?= process.cwd() + '/' +
+    @options.directory ?= (@options.baseDir ? process.cwd()) + '/' +
       if @options.name? then "__#{@options.name}-cache__" else '__cache__'
+
     @options.tmpDirectory ?= "#{@options.directory}/__tmp__"
     @options.tmpDirMode ?= @options.dirMode
 
