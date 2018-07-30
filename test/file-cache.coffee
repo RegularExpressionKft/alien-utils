@@ -39,7 +39,7 @@ check_promise = (cache, entry, state) ->
       served = entry.served = true
       Promise.resolve entry.source
 
-  cache.promise entry.cmd.id, entry.cmd
+  cache.promiseStream entry.cmd.id, entry.cmd
        .then (result) ->
          assert _.isObject(result), 'result is object'
          assert (result.stream instanceof stream.Readable), 'result.stream'
@@ -157,7 +157,7 @@ describe 'FileCache', ->
 
   it 'loaded luck', ->
     entry = entries.luck
-    cache.promise entry.cmd.id, entry.cmd
+    cache.promiseStream entry.cmd.id, entry.cmd
          .then (result) ->
            assert _.isObject(result), 'result is object'
            assert !result.job?, 'no job, no problem'
@@ -179,3 +179,31 @@ describe 'FileCache', ->
                     .then -> Promise.reject 'kitten should be gone'
                     .catch (error) ->
                       assert (error.code == 'ENOENT'), 'is no longer'
+
+  describe 'promiseMaybe', ->
+    _stream = null
+    _loader = null
+
+    before ->
+      _stream = new stream.Readable read: -> null
+      loader = cache._promiseLoaderStream
+      cache._promiseLoaderStream = -> Promise.resolve _stream
+
+    after ->
+      cache._promiseLoaderStream = _loader
+
+    it 'not yet loaded', ->
+      entry = entries.kitten
+      cache.promiseMaybeBuffer entry.cmd.id, entry.cmd
+           .then (buffer) ->
+             assert !buffer, 'nothing returned'
+
+    it 'already loaded', ->
+      entry = entries.kitten
+      _stream.push null
+
+      # TODO: delay for fs op
+      Promise.delay(50).then ->
+        cache.promiseMaybeBuffer entry.cmd.id, entry.cmd
+             .then (buffer) ->
+               assert buffer instanceof Buffer, 'content returned'
