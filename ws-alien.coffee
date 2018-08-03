@@ -1,8 +1,8 @@
 stream = require 'stream'
-uuid = require 'uuid'
 _ = require 'lodash'
 
 AlienWsJson = require './ws-json'
+uuid = require './uuid'
 
 class AlienWs extends AlienWsJson
   # Binary
@@ -16,12 +16,7 @@ class AlienWs extends AlienWsJson
 
   _wsaMakeBinaryChannelId: (channel_id) ->
     unless channel_id instanceof Buffer
-      channel_id =
-        if _.isString(channel_id) and
-           (channel_id.length == 32 or channel_id.length == 36)
-          Buffer.from uuid.parse channel_id
-        else
-          Buffer.from channel_id
+      channel_id = uuid.parse channel_id
     throw new Error 'Bad channel id' unless channel_id.length == 16
     channel_id
 
