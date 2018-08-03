@@ -16,7 +16,7 @@ class AlienWs extends AlienWsJson
 
   _wsaMakeBinaryChannelId: (channel_id) ->
     unless channel_id instanceof Buffer
-      channel_id = uuid.parse channel_id
+      channel_id = uuid.parse channel_id.slice 0, 16
     throw new Error 'Bad channel id' unless channel_id.length == 16
     channel_id
 
