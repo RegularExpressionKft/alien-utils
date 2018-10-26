@@ -10,8 +10,24 @@ StreamProxy = require './stream-proxy'
 TaskRunner = require './task-runner'
 pfs = require './promise-fs'
 file_utils = require './file-utils'
+once = require './once'
 
 underscore = "_"[0]
+
+streamToBuffer = (stream) ->
+  datas = []
+
+  Promise.reject 'no stream' unless stream?
+  Promise.reject 'stream not readable' unless stream.readable
+
+  onEnd = -> Buffer.concat datas
+  once.promiseSimple stream,
+    end: onEnd
+    close: onEnd
+    error: 'reject'
+    data: (data) ->
+            datas.push data
+            null
 
 class CacheMissError extends Error then constructor: -> super
 
@@ -23,11 +39,13 @@ class FileCache extends EventEmitter
     maxBytes: 104857600 # 100MB
     # directory: "#{process.cwd()}/__cache__"
     digest: 'sha256'
+    type: 'data'
 
   constructor: (options) ->
     @options = _.defaults options, @defaults, file_utils.defaults
-    @options.directory ?= process.cwd() + '/' +
+    @options.directory ?= (@options.baseDir ? process.cwd()) + '/' +
       if @options.name? then "__#{@options.name}-cache__" else '__cache__'
+
     @options.tmpDirectory ?= "#{@options.directory}/__tmp__"
     @options.tmpDirMode ?= @options.dirMode
 
@@ -69,7 +87,7 @@ class FileCache extends EventEmitter
   # ==== CLEAN
 
   _loadCache: ->
-    @_scanning ?= pfs.glob "#{@options.directory}/*.data"
+    @_scanning ?= pfs.glob "#{@options.directory}/*.#{@options.type}"
                      .then (files) =>
                        @_loadCachedFiles files
                      .catch (error) =>
@@ -77,12 +95,13 @@ class FileCache extends EventEmitter
                        null
 
   _loadCachedFile: (fn) ->
-    if (match = fn.match /([^/]+)\.data$/)?
+    if (match = fn.match new RegExp "([^/]+)\\.#{@options.type}$")?
       result = tag: match[1]
       pfs.stat fn
-         .then (stat) ->
+         .then (stat) =>
            result.size = stat.size
-           fn = fn.replace /\.data$/, '.lru'
+           re = new RegExp "\.#{@options.type}$"
+           fn = fn.replace re, '.lru'
            pfs.stat fn
          .then (stat) ->
            result.lru = stat.mtime
@@ -114,7 +133,7 @@ class FileCache extends EventEmitter
 
   _removeOneFromCache: (tag) ->
     base = @_tagToFn tag
-    pfs.unlink "#{base}.data"
+    pfs.unlink "#{base}.#{@options.type}"
        .catch (error) ->
          @error? 'unlink data', error unless file_utils.isEnoent error
          null
@@ -252,23 +271,34 @@ class FileCache extends EventEmitter
     if error?
       @error? 'Loader failed',
         error: error
+        errorStr: "#{error}"
         job: @_logJob job
       job.loaderState = 'error'
       job.loaderFailed = true
+
+      job._proxy.end() unless job._proxy.finished
     else
       @debug? 'Loader done', @_logJob job
       job.loaderState = 'done'
       job.size = job._proxy.length
     job.loaderFinished = true
+
     @_onJobMaybeFinished job
 
-  _addLoaderStream: (job, stream) ->
-    @debug? 'Started loader', @_logJob job
+  _addLoaderStream: (job, stream_or_buffer) ->
     job.loaderState = 'running'
-    job._loaderStream = stream
-    stream.on 'error', (error) => @_onLoaderFinished job, error
-          .on 'end', => @_onLoaderFinished job
-          .pipe job._proxy
+    if stream_or_buffer instanceof Buffer
+      buffer = stream_or_buffer
+      @debug? 'Loader returned buffer', @_logJob job
+      job._proxy.end buffer
+      @_onLoaderFinished job
+    else
+      stream = stream_or_buffer
+      @debug? 'Started loader', @_logJob job
+      job._loaderStream = stream
+      stream.on 'error', (error) => @_onLoaderFinished job, error
+            .on 'end', => @_onLoaderFinished job
+            .pipe job._proxy
     @
 
   _setupLoader: (job) ->
@@ -315,7 +345,7 @@ class FileCache extends EventEmitter
       @_onJobMaybeFinished job
     else
       @debug? 'Writer done, moving', @_logJob job
-      pfs.rename job.tmpFn, fn = @_tagToFn job.tag, 'data'
+      pfs.rename job.tmpFn, fn = @_tagToFn job.tag, @options.type
          .then =>
            job.fn = fn
            @debug? 'Rename finished, writer success', @_logJob job
@@ -429,7 +459,7 @@ class FileCache extends EventEmitter
   # Result cached in a file
 
   _promiseLoaded: (tag) ->
-    pfs.createReadStream fn = @_tagToFn tag, 'data'
+    pfs.createReadStream fn = @_tagToFn tag, @options.type
        .then (stream) =>
          @_updateLru tag
          stream: stream
@@ -452,7 +482,7 @@ class FileCache extends EventEmitter
 
   # ==== GET
 
-  promise: (args...) ->
+  promiseStream: (args...) ->
     @_promiseLoading args...
     .catch @isMiss, (error) =>
       @_promiseQueued args...
@@ -460,5 +490,23 @@ class FileCache extends EventEmitter
       @_promiseLoaded args...
     .catch @isMiss, (error) =>
       @_promiseMissing args...
+
+  _promiseStreamToBuffer: (result) =>
+    if result.stream?
+      streamToBuffer result.stream
+    else
+      Promise.reject 'promiseBuffer - No stream in result.'
+
+  promiseBuffer: (args...) ->
+    @promiseStream(args...).then @_promiseStreamToBuffer
+
+  promiseMaybeBuffer: (args...) ->
+    @_promiseLoaded(args...).then @_promiseStreamToBuffer
+    .catch @isMiss, (error) =>
+      @promiseStream args...
+      .catch (error) =>
+        @warn? 'promiseMaybeBuffer', error
+        null
+      null
 
 module.exports = FileCache

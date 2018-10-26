@@ -12,11 +12,10 @@ methods = _.filter _.keysIn(fs), (name) ->
   _.isFunction(fs[name]) and _.isFunction(fs["#{name}Sync"])
 methods.forEach (name) ->
   fs_method = fs[name]
-  cb_idx = fs_method.length - 1
   promisified[name] = (args...) ->
     new Promise (resolve, reject) ->
       try
-        args[cb_idx] = (error, results...) ->
+        args.push (error, results...) ->
           if error?
             reject error
           else

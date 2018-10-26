@@ -66,8 +66,8 @@ class StreamProxyReader extends stream.Readable
     push = true
     unless @_inPush
       try
+        @_inPush = true
         if (buffer = @master.buffer)?
-          @_inPush = true
           if @master.options.objectMode
             while push and @position < buffer.length
               push = @push buffer[@position]
@@ -85,6 +85,10 @@ class StreamProxyReader extends stream.Readable
             @_done() if @master.finished and @position >= buffer.length
           else
             @reading = false
+        else if @master.finished
+          push = false
+          @_done()
+        @_inPush = false
       catch error
         @_inPush = false
         throw error
