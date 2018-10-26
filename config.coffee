@@ -12,22 +12,28 @@ optional = (req) ->
                    (("#{e}".indexOf req) >= 0)
   ret
 
-load_config = (name, relative_to = process.cwd(), rest...) ->
-  cfg = optional "#{relative_to}/config/#{name}"
-  cfg = cfg rest... if _.isFunction cfg
-  cfg
+configure = (user_config, relative_to = process.cwd(), rest...) ->
+  merge_config = (base, name) ->
+    unless _.isString name
+      throw new Error "Config name '#{name}' is not a string"
 
-configure = (user_config, relative_to = process.cwd()) ->
-  default_config = load_config 'default', relative_to
-  local_config = load_config 'local', relative_to
-  tmp_config = _.defaultsDeep {}, user_config, local_config
+    cfg = optional "#{relative_to}/config/#{name}"
+    if _.isFunction cfg
+      cfg base, rest...
+    else
+      _.defaultsDeep cfg, base
 
-  mode = tmp_config.mode ?= default_config?.mode ? 'dev'
-  unless mode.match /^(?:default|local)$/
-    mode_config = load_config mode, relative_to
+  start = {}
+  mode =
+    if _.isObject user_config
+      start = _.cloneDeep user_config
+      user_config.mode
+    else
+      user_config
 
-  _.defaultsDeep tmp_config, mode_config, default_config
+  order = _.uniq _.flatten [ 'default', mode ? 'dev', 'local', 'gen' ]
+  start.mode ?= order[1]
 
-configure.loadConfig = load_config
+  _.reduce order, merge_config, start
 
 module.exports = configure
