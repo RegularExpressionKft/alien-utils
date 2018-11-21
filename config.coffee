@@ -21,11 +21,13 @@ configure = (user_config, relative_to = process.cwd(), rest...) ->
         if _.isString current
           optional "#{relative_to}/config/#{current}"
         else if _.isFunction current
-          current base, user_config, rest...
+          current
         else if _.isObject current
           current
         else
           throw new Error "Config '#{current}' is not a string"
+
+      cfg = cfg base, user_config, rest... if _.isFunction cfg
 
       if !cfg?
         base
@@ -41,6 +43,6 @@ configure = (user_config, relative_to = process.cwd(), rest...) ->
       user_config
   order = _.uniq _.flatten [ 'default', mode ? 'dev', 'local', user_config, 'gen' ]
 
-  _.reduce order, merge_config, mode: mode
+  _.reduce order, merge_config, mode: order[1]
 
 module.exports = configure
