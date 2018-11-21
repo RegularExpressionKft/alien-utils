@@ -13,27 +13,34 @@ optional = (req) ->
   ret
 
 configure = (user_config, relative_to = process.cwd(), rest...) ->
-  merge_config = (base, name) ->
-    unless _.isString name
-      throw new Error "Config name '#{name}' is not a string"
-
-    cfg = optional "#{relative_to}/config/#{name}"
-    if _.isFunction cfg
-      cfg base, rest...
+  merge_config = (base, current) ->
+    if !current?
+      base
     else
-      _.defaultsDeep cfg, base
+      cfg =
+        if _.isString current
+          optional "#{relative_to}/config/#{current}"
+        else if _.isFunction current
+          current base, user_config, rest...
+        else if _.isObject current
+          current
+        else
+          throw new Error "Config '#{current}' is not a string"
 
-  start = {}
+      if !cfg?
+        base
+      else if _.isObject cfg
+        _.defaultsDeep cfg, base
+      else
+        throw new Error "Config '#{current}' is not an object after loading"
+
   mode =
     if _.isObject user_config
-      start = _.cloneDeep user_config
       user_config.mode
     else
       user_config
+  order = _.uniq _.flatten [ 'default', mode ? 'dev', 'local', user_config, 'gen' ]
 
-  order = _.uniq _.flatten [ 'default', mode ? 'dev', 'local', 'gen' ]
-  start.mode ?= order[1]
-
-  _.reduce order, merge_config, start
+  _.reduce order, merge_config, mode: mode
 
 module.exports = configure
