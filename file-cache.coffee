@@ -515,7 +515,7 @@ class FileCache extends EventEmitter
     @promiseStream args...
     .then (ret) =>
       if ret.fn?
-        fn
+        ret.fn
       else if (job = ret.job)?
         if job.finished
           returnFn job
