@@ -29,6 +29,8 @@ streamToBuffer = (stream) ->
             datas.push data
             null
 
+returnFn = (job) -> job.fn ? Promise.reject 'Job failed, no fn'
+
 class CacheMissError extends Error then constructor: -> super
 
 # TODO Get rid of callbacks, use promises everywhere
@@ -508,5 +510,23 @@ class FileCache extends EventEmitter
         @warn? 'promiseMaybeBuffer', error
         null
       null
+
+  promiseFile: (args...) ->
+    @promiseStream args...
+    .then (ret) =>
+      if ret.fn?
+        ret.fn
+      else if (job = ret.job)?
+        if job.finished
+          returnFn job
+        else
+          once.promiseSimple @,
+            finished: (j) ->
+              if j.tag is job.tag
+                returnFn job
+              else
+                null
+      else
+        Promise.reject 'promiseFile: No job, no fn'
 
 module.exports = FileCache
