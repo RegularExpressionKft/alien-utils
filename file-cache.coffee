@@ -29,7 +29,7 @@ streamToBuffer = (stream) ->
             datas.push data
             null
 
-returnFn = (job) -> job.fn ? throw new Error "Job failed"
+returnFn = (job) -> job.fn ? Promise.reject 'Job failed, no fn'
 
 class CacheMissError extends Error then constructor: -> super
 
@@ -527,6 +527,6 @@ class FileCache extends EventEmitter
               else
                 null
       else
-        throw new Error "No job, no fn"
+        Promise.reject 'promiseFile: No job, no fn'
 
 module.exports = FileCache
