@@ -28,8 +28,12 @@ class AlienWsBase extends AlienCommander
     self
 
   constructor: (ws, reset) ->
+    if @constructor._plugins?
+      fn @ for n, fn of @constructor._plugins
+
     @_reset reset
     @_addWebSocket ws if ws?
+
     return @
 
   send: (data, flags, cb) ->
