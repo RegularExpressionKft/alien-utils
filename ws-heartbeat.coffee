@@ -43,6 +43,7 @@ heartbeat = (ws, timeout_ms, period_ms) ->
 
     wsp._onHeartbeatTimeout ?= ->
       @info? 'heartbeat timeout'
+      @emit 'heartbeat_timeout'
       @close()
 
     # send
