@@ -33,7 +33,7 @@ heartbeat = (ws, timeout_ms, period_ms) ->
 
       null
 
-    wsp._startHeartbeatTimer = (t) ->
+    wsp._startHeartbeatTimer ?= (t) ->
       timer = setTimeout =>
           @_heartbeat_recv_timer = null if @_heartbeat_recv_timer == timer
           @_onHeartbeatTimeout() if @open
@@ -50,14 +50,14 @@ heartbeat = (ws, timeout_ms, period_ms) ->
     wsp.sendHeartbeat ?= ->
       @sendJSON type: 'heartbeat'
 
-    wsp.setupHeartbeat = ->
+    wsp.setupHeartbeat ?= ->
       if @_heartbeat_send_timer?
         clearTimeout @_heartbeat_send_timer
         @_heartbeat_send_timer = null
 
       if @heartbeat_period_ms? and @heartbeat_period_ms > 0
         t = @heartbeat_period_ms * (0.5 + 0.5 * Math.random())
-        @_heartbeat_send_timer = setTimeout ->
+        @_heartbeat_send_timer = setTimeout =>
             if @open
               @sendHeartbeat()
               @setupHeartbeat()
@@ -75,7 +75,7 @@ heartbeat = (ws, timeout_ms, period_ms) ->
 
       null
 
-    wsp.cleanupHeartbeat = ->
+    wsp.cleanupHeartbeat ?= ->
       if @_heartbeat_recv_timer?
         clearTimeout @_heartbeat_recv_timer
         @_heartbeat_recv_timer = null
@@ -87,8 +87,8 @@ heartbeat = (ws, timeout_ms, period_ms) ->
     wsp.heartbeat = true
 
   if ws.send?
-    ws.on 'wsOpen', -> @setupHeartbeat
-    ws.on 'wsClose', -> @cleanupHeartbeat
+    ws.on 'wsOpen', -> @setupHeartbeat()
+    ws.on 'wsClose', -> @cleanupHeartbeat()
     ws.setupHeartbeat() if ws.open
   else
     ws._plugins ?= {}
