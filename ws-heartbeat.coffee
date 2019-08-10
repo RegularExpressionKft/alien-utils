@@ -9,10 +9,10 @@ heartbeat = (ws, timeout_ms, period_ms) ->
     # receive
     ws.addMessageTypes
       heartbeat: (msg) ->
-        @_onHeartbeatReceived msg
+        @heartbeatReceived msg
         null
 
-    wsp._onHeartbeatReceived ?= (msg) ->
+    wsp.heartbeatReceived ?= (msg) ->
       @last_heartbeat = Date.now()
 
       if @_heartbeat_recv_timer?
