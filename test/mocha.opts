@@ -1,1 +1,1 @@
---compilers coffee:coffeescript/register
+--require coffeescript/register
