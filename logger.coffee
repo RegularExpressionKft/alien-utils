@@ -57,7 +57,7 @@ class AlienLogger
     filter_opts:
       max_meta_size: 100000
       max_meta_msg: "\n... object is too big to show ...\n"
-      regexps: [ /p(ass)?w(or)?d/ ]
+      regexps: [ /password/, /_pw/ ]
       asterisk: '*****'
       circular: '@@@@@'
       atmaxdepth: '... output maxdepth is reached ...'
@@ -119,7 +119,7 @@ class AlienLogger
       if str_obj.length > @filter_opts.max_meta_size
         str_obj = str_obj.substr(0, @filter_opts.max_meta_size) +
               @filter_opts.max_meta_msg
-      else if !_.isEmpty(@filter_opts.regexps) && 
+      else if !_.isEmpty(@filter_opts.regexps) &&
                            @filter_opts.regexps.some( (w) -> w.test str_obj)
         str_obj = util.inspect @pwdfilter(meta), util_depth
       str_obj
