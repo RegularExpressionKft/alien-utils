@@ -14,17 +14,16 @@ class AlienWsBase extends AlienCommander
 
   # ==== Public API ====
 
-  @fromAlienServer: (master, ws, params) ->
-    req = ws.upgradeReq
-    self = req.alienLogger.decorate(
+  @fromAlienServer: (master, connection) ->
+    self = connection.logger.decorate(
       new @ null,
-        params: params
-        master: master
         app: master.app
-        id: req.alienUuid
-        req: req
-    )._addWebSocket ws
-    req.emit 'alien-upgrade', self
+        master: master
+        connection: connection
+        id: connection.uuid
+        params: connection.params
+    )._addWebSocket connection.ws
+    connection.emit 'alien-upgrade', self
     self
 
   constructor: (ws, reset) ->
