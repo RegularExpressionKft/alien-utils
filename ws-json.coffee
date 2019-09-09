@@ -13,24 +13,27 @@ class AlienWsJson extends AlienWsBase
       cb? error
       @_syncError error, 'json-output'
 
-  _onWsMessage: (data, flags) ->
+  isBinaryMessage: (data) -> Buffer.isBuffer data
+
+  _onWsMessage: (data) ->
     ret = super
     try
-      if flags?.binary
-        @_onWsjBinaryMessage data, flags
+      if @isBinaryMessage data
+        @_onWsjBinaryMessage data
       else
         msg = JSON.parse data
-        @_onWsjJsonMessage msg, data, flags
+        @_onWsjJsonMessage msg, data
     catch error
-      @_onWsjBadMessage error, msg, data, flags
+      @_onWsjBadMessage error, msg, data
     ret
 
-  # _onWsjBinaryMessage: (data, flags) -> null
-  # _onWsjJsonMessage: (msg, data, flags) -> null
+  # _onWsjBinaryMessage: (data) -> null
+  # _onWsjJsonMessage: (msg, data) -> null
 
-  _onWsjBadMessage: (error, msg, data, flags) ->
+  _onWsjBadMessage: (error, msg, data) ->
     error = new Error error unless error instanceof Error
-    type = if flags?.binary
+    type =
+      if @isBinaryMessage data
         'binary'
       else
         error.ws_pkt = msg ? data
