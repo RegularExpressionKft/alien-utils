@@ -41,8 +41,7 @@ diffObject = (a, b) ->
     else
       result[k] = a: v
 
-  for k, v of b when !_.has a, k
-    result[k] = b: v
+  result[k] = b: v for k, v of b when !_.has a, k
 
   if _.isEmpty result then null else result
 
@@ -56,10 +55,7 @@ _diff = (a, b) ->
     b: b
 
 diff = (a, b) ->
-  if _.isEqual a, b
-    null
-  else
-    _diff a, b
+  if _.isEqual a, b then null else _diff a, b
 
 module.exports =
   deinherit: (own, base, eqmark = null) ->
