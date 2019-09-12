@@ -29,33 +29,33 @@ _deinherit = (own, base) ->
   else
     own
 
-diffArray = (a, b) ->
-  _.zipWith a, b, diff
+diffArray = (left, right) ->
+  _.zipWith left, right, diff
 
-diffObject = (a, b) ->
+diffObject = (left, right) ->
   result = {}
 
-  for k, v of a
-    if _.has b, k
-      result[k] = _diff v, b[k] unless _.isEqual v, b[k]
+  for k, v of left
+    if _.has right, k
+      result[k] = _diff v, right[k] unless _.isEqual v, right[k]
     else
-      result[k] = a: v
+      result[k] = left: v
 
-  result[k] = b: v for k, v of b when !_.has a, k
+  result[k] = right: v for k, v of right when !_.has left, k
 
   if _.isEmpty result then null else result
 
-_diff = (a, b) ->
-  if _.isArray(a) and _.isArray(b)
-    diffArray a, b
-  else if _.isObject(a) and _.isObject(b)
-    diffObject a, b
+_diff = (left, right) ->
+  if _.isArray(left) and _.isArray(right)
+    diffArray left, right
+  else if _.isObject(left) and _.isObject(right)
+    diffObject left, right
   else
-    a: a
-    b: b
+    left: left
+    right: right
 
-diff = (a, b) ->
-  if _.isEqual a, b then null else _diff a, b
+diff = (left, right) ->
+  if _.isEqual left, right then null else _diff left, right
 
 module.exports =
   deinherit: (own, base, eqmark = null) ->
