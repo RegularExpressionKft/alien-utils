@@ -5,6 +5,7 @@ AlienUtils =
   Logger: require './logger'
   TaskRunner: require './task-runner'
   isUuid: require './is-uuid'
+  deep: require './deep'
   once: require './once'
   plugin: require './plugin-utils'
   promise: require './promise'
