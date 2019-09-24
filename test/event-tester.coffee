@@ -28,7 +28,7 @@ describe 'EventTester', ->
         assert fired, 'fired'
         done()
 
-    it 'removes', ->
+    it 'removes', (done) ->
       fired = false
       tester.remove 'apokalipszis', handler
       assert !fired, 'not yet fired'
@@ -42,7 +42,7 @@ describe 'EventTester', ->
           assert fired, 'fired'
           done()
 
-    it 'done', ->
+    it 'done', (done) ->
       fired = false
       tester.done()
 

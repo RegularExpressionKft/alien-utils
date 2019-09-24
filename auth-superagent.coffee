@@ -2,7 +2,7 @@ request = require 'superagent'
 methods = require 'methods'
 _ = require 'lodash'
 
-AuthTokenGenerator = require 'alien-utils/auth-token-generator'
+AuthTokenGenerator = require './auth-token-generator'
 
 class RequestProxy
   constructor: (p_request) ->

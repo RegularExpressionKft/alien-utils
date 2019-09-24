@@ -40,17 +40,17 @@ class AlienWs extends AlienWsJson
     else
       channel_id
 
-  _onWsaBadBinaryChannel: (error, msg, data, flags) ->
+  _onWsaBadBinaryChannel: (error, msg, data) ->
     if @ignoreBadBinaryChannel
       null
     else
-      @_onWsjBadMessage error, msg, data, flags
+      @_onWsjBadMessage error, msg, data
 
-  _onWsjBinaryMessage: (data, flags) ->
+  _onWsjBinaryMessage: (data) ->
     channel_id = @_wsaExtractIdFromBinary data
     msg = @_wsaExtractDataFromBinary data
     @debug? "WsBinaryMessage #{channel_id} #{msg.length}"
-    @binaryChannels.call channel_id, @, msg, data, flags
+    @binaryChannels.call channel_id, @, msg, data
 
   sendOnBinaryChannel: (channel_id, data, flags, cb) ->
     if !cb? and _.isFunction flags
@@ -142,18 +142,18 @@ class AlienWs extends AlienWsJson
       this_object._onWsaBadMessageType error, args...
     what: 'type'
 
-  _onWsaBadMessageType: (error, msg, data, flags) ->
+  _onWsaBadMessageType: (error, msg, data) ->
     if @ignoreBadMessageType
       null
     else
-      @_onWsjBadMessage error, msg, data, flags
+      @_onWsjBadMessage error, msg, data
 
-  _onWsjJsonMessage: (msg, data, flags) ->
+  _onWsjJsonMessage: (msg, data) ->
     @debug? 'WsJsonMessage', msg
     if (_.isObject msg) && (_.isString msg.type)
-      @messageTypes.call msg.type, @, msg, data, flags
+      @messageTypes.call msg.type, @, msg, data
     else
-      @_onWsBadMessageType 'Bad / no type.', msg, data, flags
+      @_onWsaBadMessageType 'Bad / no type.', msg, data
     null
 
 add_cmds = (obj, what, cmds) ->
