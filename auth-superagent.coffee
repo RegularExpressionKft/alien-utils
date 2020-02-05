@@ -6,16 +6,16 @@ AuthTokenGenerator = require './auth-token-generator'
 
 class RequestProxy
   constructor: (p_request) ->
-    @promise = p_request.then (request) =>
-      request = request.request
+    @promise = p_request.then (r) =>
+      r = r.request
       while (q = @_queue.shift())?
-        request = request[q.method] q.arguments...
-      if request.req?
+        r = (r[q.method] q.arguments...) ? r
+      if r.req?
         # superagent is a promise but doesn't work well bluebird/mocha
-        request: request
+        request: r
       else
         # supertest is a promise and works great
-        request
+        r
     @_queue = []
 
   queue: (method, args) ->
