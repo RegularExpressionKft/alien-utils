@@ -52,6 +52,11 @@ class AuthTokenGenerator
 
   @promiseLoginToken: (opts) ->
     auth_utils.promiseRandomBytesUrl64 opts?.loginTokenLength ? 32
+    .then (token) =>
+      if /^-/.test token
+        @promiseLoginToken opts
+      else
+        token
 
   @promiseSessionSecret: (opts) ->
     auth_utils.promiseRandomBytesHex opts?.sessionSecretLength ? 16
