@@ -39,6 +39,7 @@ heartbeat = (ws, timeout_ms, period_ms) ->
           @_onHeartbeatTimeout() if @open
           null
         , t
+      timer.unref()
       @_heartbeat_recv_timer = timer
 
     wsp._onHeartbeatTimeout ?= ->
@@ -63,6 +64,7 @@ heartbeat = (ws, timeout_ms, period_ms) ->
               @setupHeartbeat()
             null
           , t
+        @_heartbeat_send_timer.unref()
 
       if !@_heartbeat_recv_timer? and
          @heartbeat_timeout_ms? and
@@ -88,7 +90,7 @@ heartbeat = (ws, timeout_ms, period_ms) ->
 
   if ws.send?
     ws.on 'wsOpen', -> @setupHeartbeat()
-    ws.on 'wsClose', -> @cleanupHeartbeat()
+    ws.on 'wsClosed', -> @cleanupHeartbeat()
     ws.setupHeartbeat() if ws.open
   else
     ws._plugins ?= {}
