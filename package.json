@@ -23,7 +23,7 @@
     "coffeescript": "^1.12.7",
     "destroy": "^1.0.4",
     "glob": "^7.0.5",
-    "lodash": "^4.13.1",
+    "lodash": "^4.17.19",
     "require-all": "^2.0.0",
     "uuid": "^2.0.2",
     "winston": "^2.2.0",
