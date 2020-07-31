@@ -7,6 +7,6 @@ module.exports = (opts) ->
 
   files = glob.sync "#{dirname}/**/*.{coffee,js}"
   files.forEach (file) =>
-    basename = file.replace /\.[^.]+$/, ''
+    basename = file.replace /(?<=\w)\.\w+$/, ''
     modules[path.parse(basename).base] ?= require "#{basename}"
   modules
