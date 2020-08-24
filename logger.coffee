@@ -55,12 +55,14 @@ class AlienLogger
       (@formatMeta options)
 
     filter_opts:
-      max_meta_size: 100000
-      max_meta_msg: "\n... object is too big to show ...\n"
+      max_meta_size: 10000
+      max_meta_size_msg: '<<truncated>>'
+      max_meta_entities: 1000
+      max_meta_entities_msg: '<<object is too big to show>>'
       regexps: [ /password/, /_pw/ ]
       asterisk: '*****'
       circular: '@@@@@'
-      atmaxdepth: '... output maxdepth is reached ...'
+      at_max_depth: '<<output max depth is reached>>'
       max_depth: null
 
     formatTimestamp: (options) ->
@@ -85,45 +87,55 @@ class AlienLogger
 
     formatMessage: (options) -> options.message ? ''
 
-    pwdfilter: (arg) ->
-      processed = []
+    metaFilter: (arg) ->
       _opts = @filter_opts
+
+      entities = 0
+      processed = []
+
       dedupe = (x, depth) ->
-        if _opts.max_depth? && (depth >= _opts.max_depth)
-          _opts.atmaxdepth
+        if _opts.max_meta_entities? && entities > _opts.max_meta_entities
+          _opts.max_meta_entities_msg
+        else if _opts.max_depth? && (depth >= _opts.max_depth)
+          _opts.at_max_depth
         else if x in processed
           _opts.circular
         else
           processed.push x
           null
-      _pwdfilter = (x, depth) ->
+
+      filter = (x, depth) ->
+        entities++
         depth++
-        if _.isFunction x
-          x
-        if _.isArray x
+
+        if _opts.max_meta_entities? && entities > _opts.max_meta_entities
+          null
+        else if _.isArray x
           dedupe(x, depth) ?
-            _.map x, (s) -> _pwdfilter s, depth
+            _.map x, (s) -> filter s, depth
         else if _.isObject x
           dedupe(x, depth) ?
             _.mapValues x, (v, k) ->
               if _opts.regexps.some((r) -> r.test k)
                 _opts.asterisk
               else
-                _pwdfilter v, depth
+                filter v, depth
         else
           x
-      _pwdfilter arg, 0
+
+      ret = filter arg, 0
+      if _opts.max_meta_entities? && entities > _opts.max_meta_entities
+        _opts.max_meta_entities_msg
+      else
+        ret
 
     _formatMeta: (meta, util_depth) ->
-      str_obj = util.inspect meta, util_depth
+      str_obj = util.inspect @metaFilter(meta), util_depth
       if str_obj.length > @filter_opts.max_meta_size
-        str_obj = str_obj.substr(0, @filter_opts.max_meta_size) +
-              @filter_opts.max_meta_msg
-      else if !_.isEmpty(@filter_opts.regexps) &&
-                           @filter_opts.regexps.some( (w) -> w.test str_obj)
-        str_obj = util.inspect @pwdfilter(meta), util_depth
+        str_obj =
+          str_obj.substr(0, @filter_opts.max_meta_size) +
+          @filter_opts.max_meta_size_msg
       str_obj
-
 
     formatMeta: (options) ->
       (if _.isObject(options.meta) && !_.isEmpty options.meta
