@@ -1,5 +1,4 @@
 Promise = require 'bluebird'
-base64url = require 'base64url'
 _ = require 'lodash'
 
 Buffer = require('buffer').Buffer unless Buffer?
