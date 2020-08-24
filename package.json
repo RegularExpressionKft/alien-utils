@@ -17,7 +17,7 @@
   },
   "homepage": "https://github.com/RegularExpressionKft/alien-utils#readme",
   "dependencies": {
-    "base64url": "^2.0.0",
+    "base64url": "^3.0.1",
     "bluebird": "^3.4.1",
     "buffer": "^4.9.1",
     "coffeescript": "^1.12.7",
