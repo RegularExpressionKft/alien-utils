@@ -73,6 +73,8 @@ heartbeat = (ws, timeout_ms, period_ms) ->
         if @last_heartbeat?
           t -= Date.now() - @last_heartbeat
           t = 10 if t < 10
+
+        @last_heartbeat = null
         @_startHeartbeatTimer t
 
       null

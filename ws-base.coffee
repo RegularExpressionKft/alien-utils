@@ -235,6 +235,7 @@ class AlienWsBase extends AlienCommander
   _retireWebSocket: (ws) ->
     try
       ws.close()
+      process.nextTick -> ws.terminate()
     catch error
       # nop
     @
