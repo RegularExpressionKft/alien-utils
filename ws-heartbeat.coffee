@@ -45,7 +45,7 @@ heartbeat = (ws, timeout_ms, period_ms) ->
     wsp._onHeartbeatTimeout ?= ->
       @info? 'heartbeat timeout'
       @emit 'heartbeat_timeout'
-      @close()
+      if @reconnect then @connect() else @close()
 
     # send
     wsp.sendHeartbeat ?= ->
@@ -73,6 +73,7 @@ heartbeat = (ws, timeout_ms, period_ms) ->
         if @last_heartbeat?
           t -= Date.now() - @last_heartbeat
           t = 10 if t < 10
+
         @_startHeartbeatTimer t
 
       null
@@ -84,12 +85,15 @@ heartbeat = (ws, timeout_ms, period_ms) ->
       if @_heartbeat_send_timer?
         clearTimeout @_heartbeat_send_timer
         @_heartbeat_send_timer = null
+      @last_heartbeat = null
       null
 
     wsp.heartbeat = true
 
   if ws.send?
-    ws.on 'wsOpen', -> @setupHeartbeat()
+    ws.on 'wsOpen', ->
+      @cleanupHeartbeat()
+      @setupHeartbeat()
     ws.on 'wsClosed', -> @cleanupHeartbeat()
     ws.setupHeartbeat() if ws.open
   else
