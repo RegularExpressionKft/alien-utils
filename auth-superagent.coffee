@@ -25,6 +25,7 @@ class RequestProxy
     @
   expect: -> @queue 'expect', arguments
   send: -> @queue 'send', arguments
+  set: -> @queue 'set', arguments
   end: -> @queue 'end', arguments
   on: -> @queue 'on', arguments
   timeout: -> @queue 'timeout', arguments
