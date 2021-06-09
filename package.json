@@ -22,12 +22,12 @@
     "buffer": "^4.9.1",
     "coffeescript": "^1.12.7",
     "destroy": "^1.0.4",
-    "glob": "^7.0.5",
-    "lodash": "^4.13.1",
+    "glob": "^7.1.7",
+    "lodash": "^4.17.21",
     "require-all": "^2.0.0",
     "uuid": "^2.0.2",
     "winston": "^2.2.0",
-    "ws": "^7.1.2"
+    "ws": "^7.4.6"
   },
   "devDependencies": {
     "mocha": "^6.2.0"
