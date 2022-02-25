@@ -11,7 +11,7 @@ all = (args...) ->
 
   provider = (thing) ->
     assert _.isString(thing), 'thing is string'
-    assert things[thing]?, "thing (#{thing}) exists"
+    assert.fail "thing (#{thing}) exists" unless things[thing]?
 
     if things[thing]
       if provider.strict
