@@ -9,7 +9,7 @@ class AlienLogger
       @id = new Buffer(id.replace /[^0-9a-f]/ig, '')
         .toString('base64')
         .replace /\=/g, ''
-      @shortid = @id.substr 0, 6
+      @shortid = @id.substr 0, 8
       @prefix = '«' + @shortid + '»'
     else
       @id = id
