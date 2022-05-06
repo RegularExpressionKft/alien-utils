@@ -4,11 +4,13 @@ AlienUtils =
   EventTester: require './event-tester'
   Logger: require './logger'
   TaskRunner: require './task-runner'
+  all: require './all'
   isUuid: require './is-uuid'
   deep: require './deep'
   once: require './once'
   plugin: require './plugin-utils'
   promise: require './promise'
+  tokenize: require './tokenize'
 
   # Auth
   AuthSuperagent: require './auth-superagent'
@@ -21,6 +23,7 @@ AlienUtils =
   WsAlien: require './ws-alien'
   WsReconnect: require './ws-reconnect'
   WsClient: require './ws-client'
+  wsHeartbeat: require './ws-heartbeat'
 
   # Files / streams
   FileCache: require './file-cache'
@@ -29,5 +32,6 @@ AlienUtils =
   pfs: require './promise-fs'
   promiseStdout: require './promise-stdout'
   promiseExec: require './promise-exec'
+  requireSources: require './require-sources'
 
 module.exports = AlienUtils
