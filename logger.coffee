@@ -113,7 +113,7 @@ class AlienLogger
         else if _.isArray x
           dedupe(x, depth) ?
             _.map x, (s) -> filter s, depth
-        else if _.isObject x
+        else if _.isObject(x) and !(x instanceof Date)
           dedupe(x, depth) ?
             _.mapValues x, (v, k) ->
               if _opts.regexps.some((r) -> r.test k)
