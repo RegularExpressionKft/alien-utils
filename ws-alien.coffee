@@ -88,7 +88,7 @@ class AlienWs extends AlienWsJson
     rstream = new stream.Readable _.defaults (read: ->), stream_options
     rstream.wsaEof = false
 
-    destroyer = (cause) =>
+    destroyer = _.once (cause) =>
       unless rstream.wsaEof
         rstream.wsaEof = true
         rstream.push null
@@ -122,7 +122,7 @@ class AlienWs extends AlienWsJson
               if cb? then cb error else wstream.emit 'error', error
           null
       , stream_options
-    destroyer = (cause) =>
+    destroyer = _.once (cause) =>
       if @open
         @sendOnBinaryChannel channel_id, null
       else
