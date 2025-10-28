@@ -1,6 +1,5 @@
 Promise = require 'bluebird'
 crypto = require 'crypto'
-base64url = require 'base64url'
 
 module.exports =
   dateBufferLength: 6
@@ -21,7 +20,7 @@ module.exports =
 
   syncRandomBytes: (n) -> crypto.randomBytes n
   syncRandomBytesHex: (n) -> @syncRandomBytes(n).toString 'hex'
-  syncRandomBytesUrl64: (n) -> base64url @syncRandomBytes n
+  syncRandomBytesUrl64: (n) -> @syncRandomBytes(n).toString 'base64url'
 
   promiseRandomBytes: (n) ->
     new Promise (resolve, reject) ->
@@ -32,5 +31,4 @@ module.exports =
     .then (random) -> random.toString 'hex'
   promiseRandomBytesUrl64: (n) ->
     @promiseRandomBytes n
-    # .then (random) -> base64url random
-    .then base64url
+    .then (random) -> random.toString 'base64url'

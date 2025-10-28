@@ -17,19 +17,18 @@
   },
   "homepage": "https://github.com/RegularExpressionKft/alien-utils#readme",
   "dependencies": {
-    "base64url": "^3.0.1",
-    "bluebird": "^3.4.1",
-    "buffer": "^4.9.1",
+    "bluebird": "^3.7.2",
+    "buffer": "^6.0.3",
     "coffeescript": "^1.12.7",
     "destroy": "^1.2.0",
-    "glob": "^7.2.0",
+    "glob": "^11.0.3",
     "lodash": "^4.17.21",
-    "require-all": "^2.0.0",
-    "uuid": "^2.0.2",
-    "winston": "^2.2.0",
-    "ws": "^7.5.7"
+    "require-all": "^3.0.0",
+    "uuid": "^13.0.0",
+    "winston": "^3.18.3",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
-    "mocha": "^9.2.2"
+    "mocha": "^11.7.4"
   }
 }
