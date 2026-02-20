@@ -35,7 +35,7 @@ class AlienWsClient extends AlienWs
   messageTypes: @::messageTypes.derive
     event: '_onWscEvent'
     subscribed: '_onWscSubscribedResponse'
-    unsubscribed: '_onWscUnsubscibedResponse'
+    unsubscribed: '_onWscUnsubscribedResponse'
 
   _onWsOpen: ->
     ret = super
