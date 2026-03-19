@@ -122,7 +122,7 @@ class FileCache extends EventEmitter
   _loadCache: ->
     @_scanning ?= pfs.glob "#{@options.directory}/**/*.#{@options.type}"
                      .then (files) =>
-                       @debug "Found #{files.length} files"
+                       @debug? "Found #{files.length} files"
                        @_loadCachedFiles files
                      .catch (error) =>
                        @error? 'loadCache/glob', error
@@ -158,7 +158,7 @@ class FileCache extends EventEmitter
                @_cache = cache
              @sizeBytes = _.reduce @_cache, ((s, c) -> s + c.size), 0
              @sizeN = _.size @_cache
-             @debug "Disk cache has #{@sizeBytes} bytes in #{@sizeN} files."
+             @debug? "Disk cache has #{@sizeBytes} bytes in #{@sizeN} files."
 
              @_scanning = null
              @emit 'reload'
