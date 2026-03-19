@@ -86,11 +86,43 @@ class FileCache extends EventEmitter
          @_loadCache()
          null
 
+  # ==== SUBDIRS
+
+  _retryMkdir: (fn, cb) ->
+    Promise.resolve cb()
+    .catch file_utils.isEnoent, (error) =>
+      path = fn.replace /\/[^/]+$/, ''
+      throw error if _.isEmpty path
+      throw error if path is fn
+
+      o = recursive: true
+      if _.isObject @options.dirMode
+        _.defaults o, @options.dirMode
+      else if @options.dirMode?
+        o.mode = @options.dirMode
+
+      pfs.mkdir path, o
+      .catch -> throw error
+      .then cb
+
+  _writeFileMkdir: (fn, data, opts) ->
+    @_retryMkdir fn, ->
+      pfs.writeFile fn, data, opts
+
+  _promiseWriteJsonMkdir: (fn, data, opts) ->
+    @_retryMkdir fn, ->
+      file_utils.promiseWriteJson fn, data, opts
+
+  _renameMkdir: (old_fn, new_fn) ->
+    @_retryMkdir new_fn, ->
+      pfs.rename old_fn, new_fn
+
   # ==== CLEAN
 
   _loadCache: ->
-    @_scanning ?= pfs.glob "#{@options.directory}/*.#{@options.type}"
+    @_scanning ?= pfs.glob "#{@options.directory}/**/*.#{@options.type}"
                      .then (files) =>
+                       @debug "Found #{files.length} files"
                        @_loadCachedFiles files
                      .catch (error) =>
                        @error? 'loadCache/glob', error
@@ -126,6 +158,7 @@ class FileCache extends EventEmitter
                @_cache = cache
              @sizeBytes = _.reduce @_cache, ((s, c) -> s + c.size), 0
              @sizeN = _.size @_cache
+             @debug "Disk cache has #{@sizeBytes} bytes in #{@sizeN} files."
 
              @_scanning = null
              @emit 'reload'
@@ -213,7 +246,7 @@ class FileCache extends EventEmitter
     Promise.resolve @_getMeta job
            .then (meta) =>
              fn = @_tagToFn job.tag, 'meta'
-             file_utils.promiseWriteJson fn, meta, mode: @options.fileMode
+             @_promiseWriteJsonMkdir fn, meta, mode: @options.fileMode
            .then -> true
            .catch (error) =>
              @error? 'writeMeta',
@@ -230,9 +263,9 @@ class FileCache extends EventEmitter
 
     pfs.utimes fn, now, now
        .catch file_utils.isEnoent, =>
-         pfs.writeFile fn, '', mode: @options.fileMode
-            .then -> pfs.utimes fn, now, now
-            .then -> true
+         @_writeFileMkdir fn, '', mode: @options.fileMode
+         .then -> pfs.utimes fn, now, now
+         .then -> true
        .catch (error) =>
          @error? "updateLru(#{tag})", error
          false
@@ -347,19 +380,20 @@ class FileCache extends EventEmitter
       @_onJobMaybeFinished job
     else
       @debug? 'Writer done, moving', @_logJob job
-      pfs.rename job.tmpFn, fn = @_tagToFn job.tag, @options.type
-         .then =>
-           job.fn = fn
-           @debug? 'Rename finished, writer success', @_logJob job
-         .catch (error) =>
-           @error? 'Rename failed',
-             error: error
-             job: @_logJob job
-           job.writerFailed = true
-           null
-         .then =>
-           job.writerFinished = true
-           @_onJobMaybeFinished job
+      fn = @_tagToFn job.tag, @options.type
+      @_renameMkdir job.tmpFn, fn
+      .then =>
+        job.fn = fn
+        @debug? 'Rename finished, writer success', @_logJob job
+      .catch (error) =>
+        @error? 'Rename failed',
+          error: error
+          job: @_logJob job
+        job.writerFailed = true
+        null
+      .then =>
+        job.writerFinished = true
+        @_onJobMaybeFinished job
     null
 
   _setupWriter: (job) ->
